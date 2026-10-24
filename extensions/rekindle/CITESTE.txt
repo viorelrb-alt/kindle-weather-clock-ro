@@ -1,0 +1,23 @@
+CEAS ȘI VREME pentru Kindle Paperwhite 1 (versiunea finală 3.0)
+
+Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
+Pornire: KUAL > Ceas și vreme > alege varianta.
+
+Variante: vreme simplă sau 5 zile, în portret sau peisaj.
+
+Butoane pe ecran (de la stânga):
+1. bec: lumină. Meniu: Oprit, Minim, Mediu pe prima linie, Maxim pe a doua
+2. săgeți: întoarce ecranul cu 180° (cablul sus sau jos)
+3. listă: trece între simplu și 5 zile
+4. dreptunghiuri: trece între portret și peisaj
+5. X: ieșire la Kindle
+
+Butonul cu pin (jos, stânga): alegi orașul. Întâi județul, apoi localitatea.
+Favoritele (Călărași, Movila Miresii) sunt primele din listă.
+Sub linie, dreapta sus: 12h/24h (ceas cu AM/PM) și °C/°F.
+Butonul RO/EN (jos, dreapta): schimbă limba între română și engleză americană.
+Orașul ales rămâne salvat (city.sel). Lista e în cities.txt: poți adăuga localități.
+
+Setări: bin/../rekindle.conf (locație, fus orar, trepte de lumină, LANDSCAPE_ROTA).
+Jurnal: rekindle.log (ultimele 300 de linii).
+Dacă se blochează: ține apăsat butonul de pornire ~20 s.

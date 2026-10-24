@@ -1,0 +1,234 @@
+# Orașe pentru selectorul de pe ecran. Format: județ|localitate|latitudine|longitudine
+# Liniile cu județul "*" sunt favoritele (apar primele, la o singură atingere).
+# Poți adăuga orice localitate: copiază o linie și schimbă numele și coordonatele.
+*|Călărași|44.2058|27.3306
+*|Movila Miresii|45.2333|27.5000
+Alba|Alba Iulia|46.0667|23.5700
+Alba|Aiud|46.3100|23.7200
+Alba|Blaj|46.1760|23.9160
+Alba|Sebeș|45.9570|23.5700
+Alba|Cugir|45.8300|23.3700
+Alba|Câmpeni|46.3667|23.0500
+Arad|Arad|46.1866|21.3123
+Arad|Ineu|46.4300|21.8300
+Arad|Lipova|46.0900|21.6900
+Arad|Pecica|46.1700|21.0600
+Arad|Chișineu-Criș|46.5300|21.5200
+Arad|Sebiș|46.3600|22.1100
+Argeș|Pitești|44.8565|24.8692
+Argeș|Câmpulung|45.2700|25.0500
+Argeș|Curtea de Argeș|45.1400|24.6800
+Argeș|Mioveni|44.9500|24.9400
+Argeș|Costești|44.6700|24.8800
+Argeș|Topoloveni|44.8000|25.0900
+Bacău|Bacău|46.5670|26.9146
+Bacău|Onești|46.2500|26.7700
+Bacău|Moinești|46.4700|26.4800
+Bacău|Comănești|46.4200|26.4300
+Bacău|Buhuși|46.7100|26.7000
+Bacău|Târgu Ocna|46.2800|26.6100
+Bihor|Oradea|47.0465|21.9189
+Bihor|Salonta|46.8000|21.6600
+Bihor|Beiuș|46.6700|22.3500
+Bihor|Marghita|47.3500|22.3300
+Bihor|Aleșd|47.0600|22.4000
+Bihor|Săcueni|47.3500|22.0900
+Bistrița-Năsăud|Bistrița|47.1333|24.5000
+Bistrița-Năsăud|Beclean|47.1800|24.1800
+Bistrița-Năsăud|Năsăud|47.2800|24.4000
+Bistrița-Năsăud|Sângeorz-Băi|47.3700|24.6800
+Botoșani|Botoșani|47.7487|26.6694
+Botoșani|Dorohoi|47.9600|26.4000
+Botoșani|Darabani|48.1900|26.5900
+Botoșani|Săveni|47.9500|26.8600
+Botoșani|Flămânzi|47.5600|26.8500
+Brașov|Brașov|45.6427|25.5887
+Brașov|Făgăraș|45.8400|24.9700
+Brașov|Săcele|45.6100|25.6900
+Brașov|Râșnov|45.5900|25.4600
+Brașov|Codlea|45.7000|25.4500
+Brașov|Zărnești|45.5600|25.3200
+Brașov|Predeal|45.5000|25.5700
+Brăila|Brăila|45.2692|27.9575
+Brăila|Movila Miresii|45.2333|27.5000
+Brăila|Ianca|44.7000|27.4600
+Brăila|Însurăței|44.9300|27.6000
+Brăila|Făurei|45.0700|27.2700
+București|București|44.4268|26.1025
+Buzău|Buzău|45.1500|26.8333
+Buzău|Râmnicu Sărat|45.3800|27.0500
+Buzău|Nehoiu|45.4100|26.3000
+Buzău|Pogoanele|44.9100|26.9800
+Buzău|Pătârlagele|45.3200|26.3600
+Caraș-Severin|Reșița|45.3000|21.8833
+Caraș-Severin|Caransebeș|45.4167|22.2167
+Caraș-Severin|Oțelu Roșu|45.5300|22.3700
+Caraș-Severin|Bocșa|45.3800|21.7100
+Caraș-Severin|Oravița|45.0300|21.6900
+Caraș-Severin|Moldova Nouă|44.7300|21.6700
+Călărași|Călărași|44.2058|27.3306
+Călărași|Oltenița|44.0800|26.6400
+Călărași|Lehliu-Gară|44.4400|26.8500
+Călărași|Fundulea|44.4600|26.5200
+Călărași|Budești|44.2200|26.4800
+Cluj|Cluj-Napoca|46.7712|23.6236
+Cluj|Turda|46.5700|23.7900
+Cluj|Dej|47.1400|23.8800
+Cluj|Câmpia Turzii|46.5500|23.8800
+Cluj|Gherla|47.0200|23.9100
+Cluj|Huedin|46.8600|23.0400
+Constanța|Constanța|44.1598|28.6348
+Constanța|Mangalia|43.8100|28.5800
+Constanța|Medgidia|44.2500|28.2700
+Constanța|Năvodari|44.3200|28.6100
+Constanța|Cernavodă|44.3300|28.0300
+Constanța|Ovidiu|44.2600|28.5600
+Covasna|Sfântu Gheorghe|45.8667|25.7833
+Covasna|Târgu Secuiesc|46.0000|26.1300
+Covasna|Covasna|45.8500|26.1800
+Covasna|Baraolt|46.0800|25.6100
+Covasna|Întorsura Buzăului|45.6800|26.0300
+Dâmbovița|Târgoviște|44.9256|25.4567
+Dâmbovița|Moreni|44.9800|25.6500
+Dâmbovița|Pucioasa|45.0800|25.4300
+Dâmbovița|Găești|44.7200|25.3200
+Dâmbovița|Titu|44.6600|25.5700
+Dâmbovița|Fieni|45.1200|25.4200
+Dolj|Craiova|44.3302|23.7949
+Dolj|Calafat|43.9900|22.9300
+Dolj|Băilești|44.0300|23.3500
+Dolj|Filiași|44.5400|23.5200
+Dolj|Segarcea|44.1000|23.7600
+Dolj|Dăbuleni|43.8000|24.0800
+Galați|Galați|45.4353|28.0080
+Galați|Tecuci|45.8400|27.4300
+Galați|Târgu Bujor|45.8600|27.9100
+Galați|Berești|46.1100|27.8800
+Giurgiu|Giurgiu|43.9037|25.9699
+Giurgiu|Bolintin-Vale|44.4500|25.7600
+Giurgiu|Mihăilești|44.3400|25.9300
+Gorj|Târgu Jiu|45.0378|23.2744
+Gorj|Motru|44.8000|22.9700
+Gorj|Rovinari|44.9100|23.1700
+Gorj|Bumbești-Jiu|45.1800|23.3800
+Gorj|Novaci|45.1700|23.6800
+Gorj|Târgu Cărbunești|44.9500|23.5100
+Harghita|Miercurea Ciuc|46.3600|25.8000
+Harghita|Odorheiu Secuiesc|46.3000|25.3000
+Harghita|Gheorgheni|46.7200|25.6000
+Harghita|Toplița|46.9300|25.3500
+Harghita|Cristuru Secuiesc|46.2800|25.0300
+Harghita|Băile Tușnad|46.1400|25.8400
+Hunedoara|Deva|45.8833|22.9000
+Hunedoara|Hunedoara|45.7500|22.9000
+Hunedoara|Petroșani|45.4100|23.3700
+Hunedoara|Orăștie|45.8400|23.2000
+Hunedoara|Brad|46.1300|22.7900
+Hunedoara|Lupeni|45.3600|23.2400
+Hunedoara|Vulcan|45.3800|23.2700
+Ialomița|Slobozia|44.5667|27.3667
+Ialomița|Fetești|44.3800|27.8300
+Ialomița|Urziceni|44.7200|26.6400
+Ialomița|Țăndărei|44.6400|27.6600
+Ialomița|Amara|44.6200|27.3200
+Iași|Iași|47.1585|27.6014
+Iași|Pașcani|47.2500|26.7200
+Iași|Hârlău|47.4300|26.9000
+Iași|Târgu Frumos|47.2100|27.0100
+Iași|Podu Iloaiei|47.2000|27.2700
+Ilfov|Buftea|44.5600|25.9500
+Ilfov|Voluntari|44.4900|26.1800
+Ilfov|Otopeni|44.5500|26.0700
+Ilfov|Pantelimon|44.4400|26.2000
+Ilfov|Popești-Leordeni|44.3800|26.1600
+Ilfov|Chitila|44.5000|25.9800
+Ilfov|Bragadiru|44.3700|25.9800
+Maramureș|Baia Mare|47.6600|23.5800
+Maramureș|Sighetu Marmației|47.9300|23.8900
+Maramureș|Borșa|47.6600|24.6600
+Maramureș|Târgu Lăpuș|47.4500|23.8600
+Maramureș|Vișeu de Sus|47.7200|24.4300
+Maramureș|Cavnic|47.6600|23.8600
+Mehedinți|Drobeta-Turnu Severin|44.6300|22.6600
+Mehedinți|Orșova|44.7200|22.4000
+Mehedinți|Strehaia|44.6200|23.2000
+Mehedinți|Vânju Mare|44.4300|22.8700
+Mehedinți|Baia de Aramă|45.0000|22.8200
+Mureș|Târgu Mureș|46.5386|24.5578
+Mureș|Reghin|46.7800|24.7100
+Mureș|Sighișoara|46.2200|24.7900
+Mureș|Târnăveni|46.3300|24.2700
+Mureș|Luduș|46.4800|24.0900
+Mureș|Sovata|46.5900|25.0700
+Neamț|Piatra Neamț|46.9275|26.3708
+Neamț|Roman|46.9200|26.9300
+Neamț|Târgu Neamț|47.2000|26.3700
+Neamț|Bicaz|46.9100|26.0800
+Neamț|Roznov|46.8400|26.5200
+Olt|Slatina|44.4300|24.3700
+Olt|Caracal|44.1100|24.3500
+Olt|Balș|44.3500|24.0900
+Olt|Corabia|43.7700|24.5000
+Olt|Scornicești|44.5600|24.5500
+Olt|Drăgănești-Olt|44.1600|24.5300
+Prahova|Ploiești|44.9366|26.0300
+Prahova|Câmpina|45.1300|25.7400
+Prahova|Băicoi|45.0400|25.8500
+Prahova|Mizil|45.0100|26.4400
+Prahova|Sinaia|45.3500|25.5500
+Prahova|Vălenii de Munte|45.1800|26.0300
+Prahova|Breaza|45.1900|25.6600
+Satu Mare|Satu Mare|47.7900|22.8800
+Satu Mare|Carei|47.6800|22.4700
+Satu Mare|Negrești-Oaș|47.8700|23.4200
+Satu Mare|Tășnad|47.4800|22.5800
+Sălaj|Zalău|47.2000|23.0500
+Sălaj|Șimleu Silvaniei|47.2300|22.8000
+Sălaj|Jibou|47.2600|23.2500
+Sălaj|Cehu Silvaniei|47.4100|23.1800
+Sibiu|Sibiu|45.7983|24.1256
+Sibiu|Mediaș|46.1600|24.3500
+Sibiu|Cisnădie|45.7100|24.1500
+Sibiu|Avrig|45.7100|24.3800
+Sibiu|Agnita|45.9700|24.6200
+Sibiu|Dumbrăveni|46.2300|24.5800
+Suceava|Suceava|47.6514|26.2556
+Suceava|Fălticeni|47.4600|26.3000
+Suceava|Rădăuți|47.8400|25.9200
+Suceava|Câmpulung Moldovenesc|47.5300|25.5600
+Suceava|Vatra Dornei|47.3500|25.3600
+Suceava|Gura Humorului|47.5500|25.8900
+Suceava|Siret|47.9500|26.0700
+Teleorman|Alexandria|43.9692|25.3331
+Teleorman|Roșiorii de Vede|44.1100|24.9900
+Teleorman|Turnu Măgurele|43.7500|24.8700
+Teleorman|Zimnicea|43.6500|25.3600
+Teleorman|Videle|44.2800|25.5300
+Timiș|Timișoara|45.7489|21.2087
+Timiș|Lugoj|45.6900|21.9000
+Timiș|Sânnicolau Mare|46.0700|20.6300
+Timiș|Jimbolia|45.7900|20.7200
+Timiș|Buziaș|45.6500|21.6000
+Timiș|Făget|45.8500|22.1800
+Timiș|Deta|45.4000|21.2200
+Tulcea|Tulcea|45.1716|28.7914
+Tulcea|Babadag|44.9000|28.7200
+Tulcea|Măcin|45.2500|28.1300
+Tulcea|Isaccea|45.2700|28.4600
+Tulcea|Sulina|45.1600|29.6600
+Vaslui|Vaslui|46.6400|27.7300
+Vaslui|Bârlad|46.2300|27.6700
+Vaslui|Huși|46.6700|28.0600
+Vaslui|Negrești|46.8400|27.4600
+Vaslui|Murgeni|46.2000|28.0200
+Vâlcea|Râmnicu Vâlcea|45.1000|24.3700
+Vâlcea|Drăgășani|44.6600|24.2600
+Vâlcea|Băile Olănești|45.2000|24.2400
+Vâlcea|Brezoi|45.3500|24.2500
+Vâlcea|Horezu|45.1400|24.0000
+Vâlcea|Călimănești|45.2400|24.3400
+Vrancea|Focșani|45.6967|27.1833
+Vrancea|Adjud|46.1000|27.1800
+Vrancea|Mărășești|45.8900|27.2300
+Vrancea|Panciu|45.9100|27.0900
+Vrancea|Odobești|45.7600|27.0700
