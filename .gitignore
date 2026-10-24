@@ -1,0 +1,5 @@
+*.log
+extensions/rekindle/city.sel
+extensions/rekindle/lang.sel
+extensions/rekindle/temp.sel
+extensions/rekindle/clock.sel
