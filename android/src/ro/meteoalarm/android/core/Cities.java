@@ -58,6 +58,36 @@ public final class Cities {
 		return null;
 	}
 
+	/** The town NAME in COUNTY, compared without case and diacritics (null if not listed). */
+	public City find(String county, String name) {
+		List<City> l = byCounty.get(county);
+		if (l == null) return null;
+		String f = Warnings.fold(name);
+		for (City c : l) if (Warnings.fold(c.name).equals(f)) return c;
+		return null;
+	}
+
+	/** Adds a town to its county (a new county goes at the end), unless it is listed already. */
+	public void add(City c) {
+		if (find(c.county, c.name) != null) return;
+		List<City> l = byCounty.get(c.county);
+		if (l == null) byCounty.put(c.county, l = new ArrayList<City>());
+		l.add(c);
+	}
+
+	/**
+	 * The county as cities.txt spells it, from a geocoder's "Județul Călărași", "Calarasi County"
+	 * or "Bucharest"; anything else is returned trimmed.
+	 */
+	public String county(String raw) {
+		if (raw == null) return "";
+		String r = raw.trim().replaceFirst("^(?i)(jude[țţt]ul|jude[țţt]|municipiul)\\s+", "").replaceFirst("(?i)\\s+county$", "").trim();
+		String f = Warnings.fold(r);
+		if (f.contains("bucuresti") || f.contains("bucharest")) f = "bucuresti";
+		for (String k : byCounty.keySet()) if (Warnings.fold(k).equals(f)) return k;
+		return r;
+	}
+
 	/** Licence plate code of a Romanian county ("Călărași" -> "CL"). */
 	public static String countyCode(String c) {
 		String[] t = { "Alba", "AB", "Arad", "AR", "Argeș", "AG", "Bacău", "BC", "Bihor", "BH", "Bistrița-Năsăud", "BN",

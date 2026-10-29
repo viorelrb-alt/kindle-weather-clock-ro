@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -24,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+
+import android.Manifest;
 
 import ro.meteoalarm.android.core.Cities;
 import ro.meteoalarm.android.core.Screen;
@@ -36,7 +39,7 @@ import ro.meteoalarm.android.core.Weather;
  * while the app is open (every hour at night) and kept on disk, so it opens at once offline.
  */
 public final class MainActivity extends Activity implements WeatherView.Taps {
-	static final String VERSION = "Meteo Alarm Android v0.12";
+	static final String VERSION = "Meteo Alarm Android v0.13";
 	private static final long WEATHER_MS = 15 * 60000L, NIGHT_MS = 60 * 60000L;
 
 	private WeatherView view;
@@ -44,8 +47,10 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 	private Cities cities;
 	private SharedPreferences prefs;
 	private final Handler handler = new Handler();
-	private boolean fetching;
-	private long lastTry;
+	private boolean fetching, asked;
+	private long lastTry, lastLocate;
+	private Locator locator;
+	private static final long LOCATE_MS = 60 * 60000L;
 
 	private final Runnable tick = new Runnable() {
 		public void run() {
@@ -53,6 +58,8 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 			s.offline = s.fetched > 0 && System.currentTimeMillis() - s.fetched > 2 * interval() + 5 * 60000L;
 			long iv = s.w == null ? 60000L : interval();
 			if (System.currentTimeMillis() - Math.max(s.fetched, lastTry) >= iv) fetch();
+			// The exact position at start and then every hour, while automatic location is on.
+			if (autoLoc() && Locator.allowed(MainActivity.this) && System.currentTimeMillis() - lastLocate >= LOCATE_MS) locate(false);
 			view.invalidate();
 			// Next tick at the start of the next minute, for the clock.
 			handler.postDelayed(this, 60000 - System.currentTimeMillis() % 60000 + 50);
@@ -79,6 +86,12 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		} catch (Exception e) {
 			cities = new Cities("");
 		}
+		// Towns found by the location, kept on the phone.
+		for (String k : prefs.getString("myCities", "").split("\n")) {
+			Cities.City c = Cities.City.fromKey(k);
+			if (c != null) cities.add(c);
+		}
+		locator = new Locator(this);
 		applySettings();
 		loadCache();
 		setContentView(view);
@@ -121,6 +134,85 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		registerReceiver(battery, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 		handler.removeCallbacks(tick);
 		handler.post(tick);
+		if (autoLoc() && !Locator.allowed(this) && !asked) askLocation();
+	}
+
+	// --- Location ----------------------------------------------------------------------
+
+	private boolean autoLoc() {
+		return prefs.getBoolean("autoLoc", true);
+	}
+
+	private void askLocation() {
+		asked = true;
+		requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }, 1);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+		if (Locator.allowed(this)) {
+			locate(true);
+		} else {
+			prefs.edit().putBoolean("autoLoc", false).apply();
+			toast(s.T.en ? "Without location access, choose the town from the list." : "Fără acces la locație, alege localitatea din listă.");
+		}
+	}
+
+	private void toast(String msg) {
+		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+	}
+
+	/** Locate button: automatic location on, and look now. */
+	public void onLocate() {
+		prefs.edit().putBoolean("autoLoc", true).apply();
+		if (!Locator.allowed(this)) askLocation();
+		else locate(true);
+	}
+
+	/**
+	 * Finds the phone's town. The weather is then for the exact position; the town is added to
+	 * the list on the phone when cities.txt does not have it. SAY: report failures (a tap).
+	 */
+	private void locate(final boolean say) {
+		lastLocate = System.currentTimeMillis();
+		s.locating = true;
+		view.invalidate();
+		locator.locate(new Locator.Result() {
+			public void found(double lat, double lon, String town, String rawCounty) {
+				s.locating = false;
+				String county = cities.county(rawCounty);
+				if (county.length() == 0) county = town;
+				Cities.City listed = cities.find(county, town);
+				double la = Math.round(lat * 10000) / 10000.0, lo = Math.round(lon * 10000) / 10000.0;
+				if (listed == null) {
+					Cities.City add = new Cities.City(county, town, la, lo);
+					cities.add(add);
+					String mine = prefs.getString("myCities", "");
+					prefs.edit().putString("myCities", mine.length() == 0 ? add.key() : mine + "\n" + add.key()).apply();
+					if (say) toast((s.T.en ? "Added to the list: " : "Adăugată în listă: ") + add.label());
+				}
+				Cities.City here = new Cities.City(county, listed != null ? listed.name : town, la, lo);
+				boolean moved = s.city == null || !s.city.name.equals(here.name) || !s.city.county.equals(here.county)
+						|| distKm(s.city.lat, s.city.lon, la, lo) > 1;
+				if (moved) setCity(here, false);
+				else view.invalidate();
+				if (moved || say) fetch();
+			}
+
+			public void failed(String why) {
+				s.locating = false;
+				view.invalidate();
+				if (!say) return;
+				if (why.equals("off")) toast(s.T.en ? "Location is off on the phone." : "Localizarea e oprită pe telefon.");
+				else if (why.equals("nofix")) toast(s.T.en ? "The position could not be found." : "Poziția nu a putut fi găsită.");
+				else toast(s.T.en ? "The town could not be found (internet?)." : "Localitatea nu a putut fi găsită (internet?).");
+			}
+		});
+	}
+
+	private static double distKm(double la1, double lo1, double la2, double lo2) {
+		double dy = (la2 - la1) * 111.2, dx = (lo2 - lo1) * 111.2 * Math.cos(Math.toRadians(la1));
+		return Math.sqrt(dx * dx + dy * dy);
 	}
 
 	@Override
@@ -289,13 +381,14 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 
 	public void onMenu() {
 		final boolean en = s.T.en;
-		boolean keepOn = prefs.getBoolean("keepOn", true);
+		boolean keepOn = prefs.getBoolean("keepOn", true), auto = autoLoc();
 		String[] items = en
 				? new String[] { "Refresh now", "Choose town", s.unitF ? "Show °C" : "Show °F", s.clk12 ? "24-hour clock" : "12-hour clock",
-						"Limba română", keepOn ? "Let the screen sleep" : "Keep the screen on", "Theme…", "About" }
+						"Limba română", keepOn ? "Let the screen sleep" : "Keep the screen on", "Theme…",
+						auto ? "Automatic location: on (turn off)" : "Automatic location: off (turn on)", "About" }
 				: new String[] { "Actualizează acum", "Alege localitatea", s.unitF ? "Afișează °C" : "Afișează °F",
 						s.clk12 ? "Ceas 24 de ore" : "Ceas 12 ore (AM/PM)", "English", keepOn ? "Lasă ecranul să se stingă" : "Ține ecranul aprins",
-						"Temă…", "Despre" };
+						"Temă…", auto ? "Localizare automată: pornită (oprește)" : "Localizare automată: oprită (pornește)", "Despre" };
 		show(dialog().setTitle("☰").setItems(items, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface d, int k) {
 				SharedPreferences.Editor e = prefs.edit();
@@ -307,6 +400,10 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 				case 4: e.putString("lang", en ? "ro" : "en"); break;
 				case 5: e.putBoolean("keepOn", !prefs.getBoolean("keepOn", true)); break;
 				case 6: pickTheme(); return;
+				case 7:
+					if (autoLoc()) prefs.edit().putBoolean("autoLoc", false).apply();
+					else onLocate();
+					return;
 				default: about(); return;
 				}
 				e.apply();
@@ -381,22 +478,33 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		}));
 	}
 
+	/** A town picked from the list: automatic location goes off until the locate button. */
 	private void choose(Cities.City c) {
+		prefs.edit().putBoolean("autoLoc", false).apply();
+		setCity(c, true);
+		fetch();
+	}
+
+	/** The shown town, kept in the settings and first among the favourites (the last three). */
+	private void setCity(Cities.City c, boolean clear) {
 		StringBuilder favs = new StringBuilder(c.key());
 		int n = 1;
 		for (String k : prefs.getString("favs", "").split("\n")) {
-			if (n >= 3 || k.length() == 0 || k.equals(c.key())) continue;
+			Cities.City f = Cities.City.fromKey(k);
+			if (n >= 3 || f == null || (f.name.equals(c.name) && f.county.equals(c.county))) continue;
 			favs.append('\n').append(k);
 			n++;
 		}
 		prefs.edit().putString("city", c.key()).putString("favs", favs.toString()).apply();
+		boolean same = s.city != null && s.city.name.equals(c.name) && s.city.county.equals(c.county);
 		s.city = c;
-		s.w = null;
-		s.warns = null;
-		s.pollenLvl = -1;
-		s.fetched = 0;
+		if (clear || !same) {
+			s.w = null;
+			s.warns = null;
+			s.pollenLvl = -1;
+			s.fetched = 0;
+		}
 		s.error = "";
 		view.invalidate();
-		fetch();
 	}
 }

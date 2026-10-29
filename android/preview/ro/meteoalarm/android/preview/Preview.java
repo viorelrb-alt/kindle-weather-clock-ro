@@ -116,7 +116,7 @@ public final class Preview {
 		s.unitF = opts.contains(" F");
 		s.clk12 = opts.contains(" 12h");
 		s.dark = opts.contains(" dark");
-		s.w = Weather.parse(fetch(Weather.forecastUrl(s.city.lat, s.city.lon, "Europe/Bucharest"), "forecast.json"));
+		s.w = Weather.parse(fetch(Weather.forecastUrl(s.city.lat, s.city.lon, "Europe/Bucharest"), opts.contains(" dry") ? "forecast-dry.json" : "forecast.json"));
 		Object[] pol = Weather.parsePollen(fetch(Weather.pollenUrl(s.city.lat, s.city.lon), "pollen.json"));
 		s.pollenLvl = (Integer) pol[0];
 		s.pollenPlant = (String) pol[1];

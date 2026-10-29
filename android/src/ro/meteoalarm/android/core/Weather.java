@@ -16,7 +16,7 @@ import java.util.Map;
  * precipitation and the next five days.
  */
 public final class Weather {
-	public static final int LOOKAHEAD_HOURS = 12;
+	public static final int LOOKAHEAD_HOURS = 12, TILE_HOURS = 25;
 	public static final int RAIN_PROBABILITY = 50;
 	public static final int LOW_OVERCAST = 35;
 	public static final String MODEL = "icon_seamless";
@@ -36,6 +36,12 @@ public final class Weather {
 	public int rainMaxP;
 	public boolean snowMaj;
 
+	// Hour by hour for the tiles (from the current hour): "HH:MM", temperature, code, day or night.
+	public final List<String> tileHours = new ArrayList<String>();
+	public double[] tileTemp = new double[0];
+	public int[] tileCode = new int[0];
+	public boolean[] tileDay = new boolean[0];
+
 	// Next days (tomorrow first): ISO date, code, rounded high/low, max precipitation probability.
 	public final List<String> dayDates = new ArrayList<String>();
 	public final List<Integer> dayCodes = new ArrayList<Integer>();
@@ -46,10 +52,10 @@ public final class Weather {
 		return "https://api.open-meteo.com/v1/forecast?latitude=" + fmt(lat) + "&longitude=" + fmt(lon)
 				+ "&current=temperature_2m,weather_code,precipitation,is_day,cloud_cover,cloud_cover_low,"
 				+ "cloud_cover_mid,cloud_cover_high,apparent_temperature,wind_speed_10m"
-				+ "&hourly=precipitation_probability,precipitation,weather_code,snowfall"
+				+ "&hourly=precipitation_probability,precipitation,weather_code,snowfall,temperature_2m,is_day"
 				+ "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,"
 				+ "sunrise,sunset,uv_index_max"
-				+ "&forecast_days=6&forecast_hours=" + LOOKAHEAD_HOURS
+				+ "&forecast_days=6&forecast_hours=" + TILE_HOURS
 				+ "&timezone=" + URLEncoder.encode(tzId, "UTF-8") + "&models=" + MODEL;
 	}
 
@@ -136,7 +142,18 @@ public final class Weather {
 			w.dayPop.add((int) nz(Json.num(dPop, k)));
 		}
 
-		int n = hTime.size(), nsn = 0, nrn = 0;
+		int nt = hTime.size(), n = Math.min(nt, LOOKAHEAD_HOURS), nsn = 0, nrn = 0;
+		List<Object> hTemp = Json.arr(hourly, "temperature_2m"), hDay = Json.arr(hourly, "is_day");
+		w.tileTemp = new double[nt];
+		w.tileCode = new int[nt];
+		w.tileDay = new boolean[nt];
+		for (int k = 0; k < nt; k++) {
+			String t = Json.str(hTime, k);
+			w.tileHours.add(t != null && t.length() >= 16 ? t.substring(11, 16) : "");
+			w.tileTemp[k] = Json.num(hTemp, k);
+			w.tileCode[k] = (int) nz(Json.num(hCode, k));
+			w.tileDay[k] = Json.num(hDay, k) != 0;
+		}
 		w.probs = new int[n];
 		w.wet = new boolean[n];
 		w.snowy = new boolean[n];
@@ -165,6 +182,11 @@ public final class Weather {
 
 	private static String hhmm(String iso) {
 		return iso != null && iso.length() >= 16 ? iso.substring(11, 16) : "";
+	}
+
+	/** Icon of a WMO code by day or night (the names under assets/icons). */
+	public static String iconOf(int code, boolean day) {
+		return new Texts(false).describe(code, day)[0];
 	}
 
 	public static boolean snowCode(int code) {

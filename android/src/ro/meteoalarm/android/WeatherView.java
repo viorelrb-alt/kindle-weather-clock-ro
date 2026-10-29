@@ -15,6 +15,8 @@ final class WeatherView extends View {
 		void onRefresh();
 
 		void onCity();
+
+		void onLocate();
 	}
 
 	final Screen screen = new Screen();
@@ -71,6 +73,7 @@ final class WeatherView extends View {
 		float x = (e.getX() - ox) / scale, y = (e.getY() - oy) / scale;
 		if (in(screen.btnMenu, x, y)) taps.onMenu();
 		else if (in(screen.btnRefresh, x, y)) taps.onRefresh();
+		else if (in(screen.btnLocate, x, y)) taps.onLocate();
 		else if (in(screen.btnCity, x, y) || in(screen.cityArea, x, y)) taps.onCity();
 		return true;
 	}

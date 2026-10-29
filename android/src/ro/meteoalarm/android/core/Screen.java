@@ -30,9 +30,12 @@ public final class Screen {
 	public String error = "";
 	/** Dark theme with the Claude app's colours; otherwise black and white like the Kindle. */
 	public boolean dark;
+	/** Looking for the phone's position (the locate button is drawn in the accent colour). */
+	public boolean locating;
 
 	// Buttons (x, y, w, h in canvas units), set by draw.
 	public final float[] btnMenu = { 40, 24, 64, 64 }, btnRefresh = { 654, 24, 64, 64 }, btnCity = { 40, 0, 64, 64 },
+			btnLocate = { 124, 0, 64, 64 },
 			cityArea = { 40, 104, 380, 56 };
 
 	/** Canvas width: 758 in portrait, wider in landscape. */
@@ -87,6 +90,7 @@ public final class Screen {
 		cityArea[0] = 40; cityArea[1] = 104; cityArea[2] = 380; cityArea[3] = 56;
 		float fb = ch - 76;
 		btnCity[1] = fb;
+		btnLocate[1] = fb;
 		if (w == null) {
 			g.rect(40, 102, 678, 2, c.line);
 			String msg = error.length() > 0 ? error : T.loading;
@@ -127,7 +131,7 @@ public final class Screen {
 			ltext(false, 30, fy + 40, 40, upper(T.hi + " " + t(w.tmax) + "° / " + T.lo + " " + t(w.tmin) + "°"), c.ink);
 
 		float y0 = fy + 80;
-		drawPrecipBox(40, y0, 678, 300, 46);
+		drawNextHours(40, y0, 678, 300);
 		drawDayCard(40, y0 + 314, 0, T.day1);
 		drawDayCard(387, y0 + 314, 1, T.day2);
 		drawDayCols(2, y0 + 526);
@@ -135,11 +139,16 @@ public final class Screen {
 		footer(fb);
 	}
 
-	/** Landscape: current weather on the left, precipitation and sun in the middle, the days on the right. */
+	/**
+	 * Landscape: the current weather on the left (it takes the extra width); on the right the next
+	 * hours (or the precipitation chart) across the top and the five days under it; sun, UV and
+	 * pollen as one line in the status row.
+	 */
 	private void drawLandscape(float ch) {
 		float fb = ch - 76;
 		btnCity[1] = fb;
-		float rightX = cw - 40 - 462, midX = rightX - 20 - 460, leftR = midX - 24;
+		btnLocate[1] = fb;
+		float rbw = 946, rbx = cw - 40 - rbw, leftR = rbx - 24;
 		g.rect(40, 102, cw - 80, 2, c.line);
 		String label = city != null ? city.label() : "";
 		float lp = fit(true, 40, cw - 124 - 380, label);
@@ -164,36 +173,79 @@ public final class Screen {
 		if (!Double.isNaN(w.tmax) && !Double.isNaN(w.tmin))
 			ltext(false, 30, fy + 40, 40, upper(T.hi + " " + t(w.tmax) + "° / " + T.lo + " " + t(w.tmin) + "°"), c.ink);
 
-		drawPrecipBox(midX, 116, 460, 330, 46);
-		drawSunBox(midX, 460, 460, 200);
-		drawDayRow(rightX, 116, 462, 170, 0, T.day1);
-		drawDayRow(rightX, 300, 462, 170, 1, T.day2);
-		for (int col = 0; col < 3; col++) {
-			float x = rightX + col * 158, cx = x + 73, top = 484;
-			box(x, top, 146, 176, 44);
-			int k = 2 + col;
+		drawNextHours(rbx, 116, rbw, 260);
+		float dw = (rbw - 4 * 12) / 5;
+		for (int k = 0; k < 5; k++) {
+			float x = rbx + k * (dw + 12), cx = x + dw / 2, top = 390;
+			box(x, top, dw, 270, 44);
 			if (k >= w.dayDates.size()) continue;
-			head(top, 44, cx, 130, T.weekdayUp(w.dayDates.get(k), true), 0);
-			drawIcon(T.describe(w.dayCodes.get(k), true)[0], cx - 32, top + 50, 64);
-			String s = t(w.dayHi.get(k)) + "° / " + t(w.dayLo.get(k)) + "°";
-			float p = fit(true, 34, 132, s);
-			ctext(true, p, top + 122 + (34 - p) * 6 / 10, cx, s, c.ink);
+			String title = k == 0 ? T.day1 : k == 1 ? T.day2 : T.weekdayUp(w.dayDates.get(k), true);
+			head(top, 44, cx, dw - 20, title, 0);
+			String[] dd = T.describe(w.dayCodes.get(k), true);
+			drawIcon(dd[0], cx - 45, top + 52, 90);
+			String hl = t(w.dayHi.get(k)) + "° / " + t(w.dayLo.get(k)) + "°";
+			float p = fit(true, 38, dw - 16, hl);
+			ctext(true, p, top + 150 + (38 - p) * 6 / 10, cx, hl, c.ink);
+			ctext(false, fit(false, 25, dw - 14, dd[1]), top + 198, cx, dd[1], c.ink);
+			ctext(false, 22, top + 232, cx, T.pop + " " + w.dayPop.get(k) + "%", c.dim);
 		}
 		footer(fb);
+		// Sun, UV and pollen in the middle of the status row.
+		StringBuilder sb = new StringBuilder();
+		sb.append(T.sunrise).append(' ').append(Texts.clock(w.sunrise, clk12)).append("   ")
+				.append(T.sunset).append(' ').append(Texts.clock(w.sunset, clk12));
+		if (w.uv >= 0) {
+			int l = w.uv <= 2 ? 1 : w.uv <= 5 ? 2 : w.uv <= 7 ? 3 : w.uv <= 10 ? 4 : 5;
+			sb.append("   UV ").append(w.uv).append(" (").append(T.uvLv[l - 1].toLowerCase()).append(')');
+		}
+		if (pollenLvl > 0) {
+			sb.append("   ").append(T.pollen.charAt(0)).append(T.pollen.substring(1).toLowerCase()).append(": ")
+					.append(T.polLv[pollenLvl - 1].toLowerCase());
+			if (pollenPlant.length() > 0) sb.append(" (").append(T.plant(pollenPlant)).append(')');
+		}
+		String sun = sb.toString();
+		float sp = fit(false, 27, cw - 520 - 260, sun);
+		ctext(false, sp, fb + 26 + (27 - sp) / 2, (520 + cw - 260) / 2, sun, c.ink);
 	}
 
-	/** A wide day card: title band, then the icon, "high° / low°" and the description beside it. */
-	private void drawDayRow(float x, float top, float wd, float h, int k, String title) {
-		box(x, top, wd, h, 44);
-		head(top, 44, x + wd / 2, wd - 40, title, 0);
-		if (k >= w.dayDates.size()) return;
-		String[] d = T.describe(w.dayCodes.get(k), true);
-		drawIcon(d[0], x + 20, top + 56, 104);
-		String hi = t(w.dayHi.get(k)) + "°", lo = " / " + t(w.dayLo.get(k)) + "°";
-		float hp = 64, lp = 36;
-		ltext(true, hp, top + 54, x + 140, hi, c.ink);
-		ltext(false, lp, top + 54 + (hp - lp) * 81 / 100, x + 140 + g.width(true, hp, hi), lo, c.dim);
-		ltext(false, fit(false, 28, wd - 160, d[1]), top + 124, x + 142, d[1], c.ink);
+	/** Precipitation chart when rain or snow is due within 12 hours, else the next hours as tiles. */
+	private void drawNextHours(float x, float y, float wd, float h) {
+		if (rainText().length() > 0 || w.tileHours.size() < 2) drawPrecipBox(x, y, wd, h, 46);
+		else drawHourTiles(x, y, wd, h, 46);
+	}
+
+	/**
+	 * The next hours in two rows of tiles, as many columns as fit (at least 125 units each): the
+	 * hour on top, the temperature on the left and the weather icon on the right.
+	 */
+	private void drawHourTiles(float pl, float pt, float pw, float ph, float phd) {
+		box(pl, pt, pw, ph, phd);
+		head(pt, phd, pl + pw / 2, pw - 40, T.hoursUp, 0);
+		float ix = pl + 14, iw = pw - 28, top = pt + phd + 6, bot = pt + ph - 8;
+		int cols = Math.max(1, (int) (iw / 125)), rows = 2;
+		int avail = w.tileHours.size() - 1;
+		if (avail < cols * rows) rows = avail > cols ? 2 : 1;
+		float tw = iw / cols, th = (bot - top) / rows, ic = Math.min(th - 40, tw * 0.46f);
+		// One temperature size for all tiles: the largest at which every one fits.
+		float p = Math.min(48, th * 0.5f);
+		for (int k = 1; k <= Math.min(avail, rows * cols); k++)
+			if (!Double.isNaN(w.tileTemp[k])) p = fit(true, p, tw - ic - 22, t(w.tileTemp[k]) + "°");
+		for (int r = 0; r < rows; r++) {
+			if (r > 0) g.rect(ix + 6, top + r * th - 1, iw - 12, 2, c.line);
+			for (int col = 0; col < cols; col++) {
+				int k = 1 + r * cols + col;
+				if (k > avail) break;
+				float tx = ix + col * tw, ty = top + r * th;
+				if (col > 0) g.rect(tx - 1, ty + 10, 2, th - 20, c.line);
+				String hr = Texts.clock(w.tileHours.get(k), clk12);
+				ctext(false, fit(false, 23, tw - 12, hr), ty + 6, tx + tw / 2, hr, c.dim);
+				float cy = ty + 32 + (th - 32) / 2;
+				drawIcon(Weather.iconOf(w.tileCode[k], w.tileDay[k]), tx + tw - ic - 8, cy - ic / 2, ic);
+				if (Double.isNaN(w.tileTemp[k])) continue;
+				String tt = t(w.tileTemp[k]) + "°";
+				ltext(true, p, cy - p * 0.5f, tx + 10, tt, c.ink);
+			}
+		}
 	}
 
 	/**
@@ -322,8 +374,9 @@ public final class Screen {
 		s = s * icPct / 100;
 		if (icFit && cy - s * (y0 + y1) / 400 < icTop && icTop + s * y1 / 200 > icBot) s = (icBot - icTop) * 200 / y1;
 		float x = cx - s * (x0 + x1) / 400;
-		if (x < icLeft) x = icLeft;
-		if (x + s > icRight) x = icRight - s;
+		// Keep the drawing itself (not its file's square) between IC_LEFT and IC_RIGHT.
+		if (x + s * x0 / 200 < icLeft) x = icLeft - s * x0 / 200;
+		if (x + s * x1 / 200 > icRight) x = icRight - s * x1 / 200;
 		float y = cy - s * (y0 + y1) / 400;
 		if (y < icTop) y = icTop;
 		drawIcon(icon, x, y, s);
@@ -583,6 +636,17 @@ public final class Screen {
 	private void footer(float fb) {
 		button(btnCity);
 		g.icon("icons/btn-city.png", 56, fb + 16, 32, 32, c.ink);
+		// Locate: a crosshair.
+		btnLocate[1] = fb;
+		button(btnLocate);
+		int lc = locating ? c.accent : c.ink;
+		float lx = 156, ly = fb + 32;
+		g.arc(lx, ly, 13, 0, 360, 3, lc);
+		g.arc(lx, ly, 2.5f, 0, 360, 5, lc);
+		g.rect(lx - 1.5f, ly - 22, 3, 8, lc);
+		g.rect(lx - 1.5f, ly + 14, 3, 8, lc);
+		g.rect(lx - 22, ly - 1.5f, 8, 3, lc);
+		g.rect(lx + 14, ly - 1.5f, 8, 3, lc);
 		float batLeft = cw - 40;
 		float gy = fb + 22;
 		if (batt >= 0) {
@@ -614,8 +678,9 @@ public final class Screen {
 			}
 		}
 		if (upd.length() > 0) {
-			float up = fit(bold, 27, batLeft - 123 - 14, upd);
-			ltext(bold, up, fb + 26, 123, upd, bold ? c.ink : c.dim);
+			float maxw = (cw > W ? 520 : batLeft) - 207 - 14;
+			float up = fit(bold, 27, maxw, upd);
+			ltext(bold, up, fb + 26, 207, upd, bold ? c.ink : c.dim);
 		}
 	}
 }
