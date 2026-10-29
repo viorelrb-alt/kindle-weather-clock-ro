@@ -1,0 +1,10 @@
+clear-day 24 24 177 177
+clear-night 38 38 144 163
+cloudy 26 59 174 136
+drizzle 26 21 174 158
+fog 25 28 176 176
+partly-day 8 8 183 157
+partly-night 31 24 183 157
+rain 26 17 174 179
+snow 26 17 174 182
+thunder 26 17 174 197

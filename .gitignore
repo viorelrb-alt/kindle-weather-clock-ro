@@ -1,5 +1,7 @@
 *.log
-extensions/rekindle/city.sel
-extensions/rekindle/lang.sel
-extensions/rekindle/temp.sel
-extensions/rekindle/clock.sel
+extensions/meteoalarmkindle/city.sel
+extensions/meteoalarmkindle/lang.sel
+extensions/meteoalarmkindle/temp.sel
+extensions/meteoalarmkindle/clock.sel
+extensions/meteoalarmkindle/recent.sel
+__pycache__/

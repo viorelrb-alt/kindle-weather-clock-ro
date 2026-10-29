@@ -9,7 +9,9 @@ This project stands on the work of others. Thank you to everyone who built and s
 | Jailbreak, Hotfix and KUAL tooling | KindleModding and the Kindle community | https://kindlemodding.org |
 | Kindle community, tools and know-how | MobileRead forums | https://www.mobileread.com |
 | Drawing on the e-ink screen (FBInk) | NiLuJe | https://github.com/NiLuJe/FBInk |
-| Weather data (CC BY 4.0) | Open-Meteo | https://open-meteo.com |
+| Weather data (CC BY 4.0), DWD ICON model | Open-Meteo | https://open-meteo.com |
+| Pollen (Air Quality API, Copernicus CAMS) | Open-Meteo | https://open-meteo.com/en/docs/air-quality-api |
+| Weather warnings for Romania | MeteoAlarm (EUMETNET), issued by ANM | https://meteoalarm.org |
 | Font (SIL OFL 1.1) | Liberation Sans, Red Hat / Google | https://github.com/liberationfonts/liberation-fonts |
 
 ## Who did what

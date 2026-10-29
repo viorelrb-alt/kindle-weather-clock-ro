@@ -1,0 +1,90 @@
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.061)
+
+Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
+Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
+Dacă ai avut o versiune până la v2.051: șterge folderul extensions/rekindle. La prima pornire,
+aplicația nouă preia de acolo orașul, °C/°F, 12/24h și limba.
+
+Variante: vreme simplă sau 5 zile, în portret sau peisaj.
+
+Interfața nouă (2.xx):
+- Sus, dreapta: ceasul și data, apoi butonul de lumină și X (ieșire la Kindle).
+- Butonul ☰ (portret: stânga sus; peisaj: jos, dreapta) deschide meniul cu 7 rânduri. La
+  pornire ordinea e: Orientare (portret / peisaj), Vedere (simplu / listă 5 zile), Întoarce
+  ecranul 180°, Actualizează vremea, Temperatura (°C / °F), Ora (24h / 12h), Limba.
+  Primele 4 rânduri se reordonează ca favoritele: cel ales ultima dată urcă primul. Ordinea
+  revine la cea de mai sus la fiecare pornire a aplicației.
+  Fiecare rând arată alegerea în care treci (ex. în peisaj: „Orientare: portret”; în română:
+  „Limba: engleză”). Meniul se închide singur după 15 secunde.
+- Orice buton sau rând atins devine gri mediu imediat, ca să vezi că atingerea a fost primită.
+  Când un meniu se închide, ecranul de sub el revine imediat, cu flash, ca să nu rămână urme.
+- Butonul de lumină: pe marginea stângă, în locul punctelor, apare o bară de lumină ca pe
+  Kobo Libra 2 (24 de trepte, cu o săgeată la treapta curentă), iar sub buton o bulă cu
+  treapta („LUMINA 13 / 24”) și cu indicația că lumina se reglează glisând pe marginea stângă.
+  Cât glisezi, săgeata și treapta se mută odată cu degetul. Bara și bula dispar, iar punctele
+  revin, la o nouă atingere pe butonul de lumină, la o atingere în altă parte a ecranului sau
+  după 10 secunde fără glisare (LIGHT_SECONDS).
+- O atingere în afara unui meniu deschis îl închide imediat (CLOSE_OUTSIDE=1; cu 0 atingerile din
+  afară sunt ignorate). O nouă atingere pe butonul ☰ sau pe pin nu închide meniul lor.
+- Lumina din deget rămâne: pe marginea stângă (60 px, marcată cu puncte gri) glisezi în sus ca să crești lumina și în jos
+  ca s-o scazi, până la stingere, ca pe Kobo.
+- Butoanele de lângă marginea ecranului se pot atinge până la margine.
+- Dacă vremea nu se descarcă (de ex. Wi-Fi-ul nu e pornit încă), aplicația reîncearcă după
+  15 secunde, de cel mult 3 ori la rând.
+- Butonul cu pin (portret: stânga jos; peisaj: dreapta jos) deschide o bulă, ca meniul ☰:
+  sus favoritele (îngroșat), apoi județele, pe două file (1/2 și 2/2, scris în titlu).
+  Favoritele sunt ultimele 3 localități alese: întâi cea curentă, apoi cea de dinainte, apoi
+  cea de dinaintea ei (salvate în recent.sel).
+  Pe rândul de jos: Înapoi, Închide, Înainte. Atingi județul, apoi localitatea.
+  Atingerea în afara bulei o închide. Încă o atingere pe pin nu o mai închide.
+  Orașul apare cu codul județului: „Călărași, CL”.
+
+Ecranul:
+- Avertizări MeteoAlarm (ANM): până la două coduri deodată, fiecare cu tipul și perioada.
+  Cod galben: casetă gri deschis. Cod portocaliu și roșu: casetă gri mediu. Codul roșu are
+  în plus un triunghi cu „!” lângă casetă (contur negru, interior alb, „!” negru).
+  Icoana vremii stă mereu sub textele avertizărilor (se micșorează dacă nu încape).
+  Fără niciun cod, în portret: spațiul liber se împarte în două jumătăți egale, una lângă alta.
+  Temperatura e în stânga și se termină la mijloc (în stânga ei rămâne loc pentru minus),
+  iar icoana vremii e centrată în dreapta. În peisaj, fără coduri: icoana sus și temperatura
+  jos, centrate, ca înainte.
+- În portret, descrierea vremii și vântul sunt în dreapta, sub temperatură (cu sau fără coduri).
+  În peisaj, sub temperatură: descrierea, apoi RESIMȚIT, MAX / MIN și VÂNT, apoi orașul.
+- RESIMȚIT, MAX / MIN și VÂNT sunt scrise cu majuscule, cu aceeași mărime pe toate ecranele
+  (mai mică decât descrierea). Orașul are aceeași mărime pe toate ecranele.
+- Temperatura mare, cu „°” și „C” (sau „F”) mai mici; sub zero, un minus scurt și subțire,
+  la mijlocul înălțimii cifrelor.
+- Titlurile casetelor (benzile gri) sunt mari și îngroșate, ca să se vadă de la distanță.
+- Vedere 5 zile: Mâine și Poimâine în casete mari, apoi încă 3 zile, în 3 casete separate.
+- Vedere simplă, cu precipitații în următoarele 12 ore: caseta „PLOAIE” sau „NINSOARE”
+  (după majoritatea orelor), cu intervalul, maximul și graficul pe ore. Deasupra graficului,
+  „acum” cu o săgeată și o linie punctată arată ora exactă (la 14:20, o treime din bara de 14:00). Bare negre = ploaie,
+  gri închis = ninsoare, gri deschis = fără precipitații.
+- Vedere simplă, fără precipitații: 3 capsule cu următoarele 3 zile. În peisaj apare și
+  3 casete separate, aliniate sub capsule: Soare (răsărit, apus), Indice UV și Polen (Open-Meteo).
+- Jos: „actualizat HH:MM” și bateria. „Se încarcă” la încărcat, „Încarcă bateria” sub 25%.
+  Ambele mesaje au aceeași zonă, ștearsă complet înainte de fiecare scriere.
+  Dacă vremea nu s-a putut descărca de mult: „! fără date din HH:MM”, negru.
+
+Automat:
+- după apus, lumina trece pe Mediu (sau se stinge, dacă bateria e sub 25%);
+- la ora 23 lumina se stinge;
+- între 23 și 06 vremea se actualizează o dată pe oră (ziua, la 15 minute).
+Dacă schimbi lumina, alegerea ta rămâne până la următoarea schimbare automată.
+
+Starea cerului: din norii joși și medii (nu din norii înalți, subțiri). Nori joși de peste
+35% = Înnorat. Model meteo: icon_seamless (DWD, Germania).
+
+Setări: meteoalarmkindle.conf (locație, fus orar, trepte de lumină, LANDSCAPE_ROTA,
+MODEL, CLOUD_REFINE, LOW_OVERCAST, NIGHT_START/NIGHT_END, NIGHT_WEATHER_MINUTES,
+AUTO_LIGHT, EVENING_LIGHT, BATT_LOW, SHOW_FEELS, WARNINGS, POLLEN, MENU_SECONDS, LIGHT_SECONDS,
+CLOSE_OUTSIDE).
+Orașul ales rămâne salvat (city.sel). Lista e în cities.txt: poți adăuga localități.
+Paginile cu județe și localități sunt gata desenate în ui/loc/ (se deschid repede). Dacă
+modifici cities.txt, paginile schimbate se desenează nume cu nume, puțin mai încet.
+Jurnal: meteoalarmkindle.log (ultimele 300 de linii). La pornire scrie versiunea („start v2.061 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+Dacă se blochează: ține apăsat butonul de pornire ~20 s.
+
+Despre: Meteo Alarm Kindle rulează prin KUAL (Kindle Unified Application Launcher) și a
+pornit de la rekindle, un script mai vechi de ceas și vreme. Vremea vine de la Open-Meteo,
+avertizările de la MeteoAlarm (ANM). Fonturi: Liberation Sans (licența în fonts/).
