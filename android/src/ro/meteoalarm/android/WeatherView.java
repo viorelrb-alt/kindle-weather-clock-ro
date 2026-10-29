@@ -20,7 +20,7 @@ final class WeatherView extends View {
 	final Screen screen = new Screen();
 	private final AndroidGfx gfx;
 	private Taps taps;
-	private float scale = 1, ox;
+	private float scale = 1, ox, oy;
 
 	WeatherView(Context ctx, Taps taps) {
 		super(ctx);
@@ -33,19 +33,31 @@ final class WeatherView extends View {
 	protected void onDraw(Canvas c) {
 		int w = getWidth(), h = getHeight();
 		if (w == 0 || h == 0) return;
-		scale = w / Screen.W;
-		float ch = h / scale;
-		if (ch < Screen.BASE_H) {
-			scale = h / Screen.BASE_H;
-			ch = Screen.BASE_H;
+		float cw, ch;
+		if (w > h) {
+			// Landscape: 758 units high, at least BASE_LW wide; the extra width goes to the weather column.
+			scale = Math.min(h / Screen.LH, w / Screen.BASE_LW);
+			cw = w / scale;
+			ch = Screen.LH;
+			ox = 0;
+			oy = (h - ch * scale) / 2;
+		} else {
+			scale = w / Screen.W;
+			ch = h / scale;
+			if (ch < Screen.BASE_H) {
+				scale = h / Screen.BASE_H;
+				ch = Screen.BASE_H;
+			}
+			cw = Screen.W;
+			ox = (w - cw * scale) / 2;
+			oy = 0;
 		}
-		ox = (w - Screen.W * scale) / 2;
 		c.drawColor(screen.dark ? 0xFF262624 : 0xFFFFFFFF);
 		c.save();
-		c.translate(ox, 0);
+		c.translate(ox, oy);
 		c.scale(scale, scale);
 		gfx.c = c;
-		screen.draw(gfx, ch);
+		screen.draw(gfx, cw, ch);
 		c.restore();
 	}
 
@@ -56,10 +68,10 @@ final class WeatherView extends View {
 	@Override
 	public boolean onTouchEvent(MotionEvent e) {
 		if (e.getAction() != MotionEvent.ACTION_UP) return true;
-		float x = (e.getX() - ox) / scale, y = e.getY() / scale;
+		float x = (e.getX() - ox) / scale, y = (e.getY() - oy) / scale;
 		if (in(screen.btnMenu, x, y)) taps.onMenu();
 		else if (in(screen.btnRefresh, x, y)) taps.onRefresh();
-		else if (in(screen.btnCity, x, y) || (y >= screen.cityTop && y <= screen.cityBottom && x < 420)) taps.onCity();
+		else if (in(screen.btnCity, x, y) || in(screen.cityArea, x, y)) taps.onCity();
 		return true;
 	}
 }

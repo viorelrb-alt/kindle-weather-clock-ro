@@ -1,4 +1,4 @@
-# Meteo Alarm Android v0.11 (test)
+# Meteo Alarm Android v0.12 (test)
 
 The Meteo Alarm Kindle portrait screen ported to an Android phone, kept black and white like the
 Kindle and laid out for a tall screen (made for a Samsung Galaxy A54, 1080x2340). Same data as the
@@ -9,10 +9,14 @@ Kindle: Open-Meteo (DWD ICON) forecast, MeteoAlarm warnings for the county, poll
   <img src="docs/preview-a54-dark.png" width="45%" alt="Dark theme, Claude app colours">
 </p>
 
-*PC previews drawn by the same code with sample data (`./build.sh preview`, `./build.sh preview dark`).*
+![Landscape, dark theme](docs/preview-a54-landscape-dark.png)
+
+*PC previews drawn by the same code with sample data (`./build.sh preview`, `./build.sh preview dark`, `./build.sh preview land`).*
 
 ## What it does
 
+- Portrait and landscape: it turns with the phone (unless auto-rotate is off). Landscape has
+  three columns: the weather now, precipitation with sun / UV / pollen, and the five days.
 - Full screen clock and weather, screen kept on (a ☰ menu option lets it sleep).
 - Clock, date, city with county code, up to two MeteoAlarm warnings (yellow, orange, red).
 - Big temperature and icon, feels like, high/low, wind.

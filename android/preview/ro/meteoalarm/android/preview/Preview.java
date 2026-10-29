@@ -108,6 +108,7 @@ public final class Preview {
 		File assets = new File(a[0]);
 		int pw = a.length > 3 ? Integer.parseInt(a[2]) : 1080, ph = a.length > 3 ? Integer.parseInt(a[3]) : 2340;
 		String opts = String.join(" ", a);
+		if (opts.contains(" land")) { int t = pw; pw = ph; ph = t; }
 		Cities cities = new Cities(new String(Files.readAllBytes(new File(assets, "cities.txt").toPath()), "UTF-8"));
 		Screen s = new Screen();
 		s.city = cities.find(opts.contains("brasov") ? "Brașov" : "Călărași");
@@ -141,9 +142,20 @@ public final class Preview {
 		s.batt = 78;
 		s.fetched = now;
 		s.now = Calendar.getInstance();
-		float scale = pw / Screen.W;
-		float ch = ph / scale;
-		if (ch < Screen.BASE_H) { scale = ph / Screen.BASE_H; ch = Screen.BASE_H; }
+		float scale, cw, ch, ox, oy = 0;
+		if (pw > ph) {
+			scale = Math.min(ph / Screen.LH, pw / Screen.BASE_LW);
+			cw = pw / scale;
+			ch = Screen.LH;
+			ox = 0;
+			oy = (ph - ch * scale) / 2;
+		} else {
+			scale = pw / Screen.W;
+			ch = ph / scale;
+			if (ch < Screen.BASE_H) { scale = ph / Screen.BASE_H; ch = Screen.BASE_H; }
+			cw = Screen.W;
+			ox = (pw - cw * scale) / 2;
+		}
 		BufferedImage img = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g = img.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -152,9 +164,9 @@ public final class Preview {
 		g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
 		g.setColor(new Color(s.dark ? 0x262624 : 0xFFFFFF));
 		g.fillRect(0, 0, pw, ph);
-		g.translate((pw - Screen.W * scale) / 2, 0);
+		g.translate(ox, oy);
 		g.scale(scale, scale);
-		s.draw(new J2d(g, assets), ch);
+		s.draw(new J2d(g, assets), cw, ch);
 		ImageIO.write(img, "png", new File(a[1]));
 		System.out.println("warnings for " + s.city.county + ": " + s.warns.size() + ", pollen " + s.pollenLvl + " " + s.pollenPlant + ", code " + s.w.code);
 	}

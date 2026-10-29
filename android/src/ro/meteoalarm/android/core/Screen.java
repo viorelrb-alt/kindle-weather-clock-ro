@@ -4,14 +4,16 @@ import java.util.Calendar;
 import java.util.List;
 
 /**
- * The portrait screen of Meteo Alarm Kindle, laid out for a tall phone. The canvas is 758 units
- * wide like the Paperwhite's; the height follows the phone (at least BASE_H) and the extra room
- * goes to the current weather. From the top: clock, city and warnings, the temperature and icon,
- * the precipitation chart, tomorrow and the day after, three more days, sun / UV / pollen and the
- * status line.
+ * The screens of Meteo Alarm Kindle, laid out for a phone. Portrait: the canvas is 758 units wide
+ * like the Paperwhite's; the height follows the phone (at least BASE_H) and the extra room goes to
+ * the current weather. From the top: clock, city and warnings, the temperature and icon, the
+ * precipitation chart, tomorrow and the day after, three more days, sun / UV / pollen and the
+ * status line. Landscape: the canvas is 758 units high and at least BASE_LW wide, in three
+ * columns: the current weather (it takes the extra width), precipitation over sun / UV / pollen,
+ * and the five days.
  */
 public final class Screen {
-	public static final float W = 758, BASE_H = 1538;
+	public static final float W = 758, BASE_H = 1538, LH = 758, BASE_LW = 1560;
 
 	// Inputs.
 	public Weather w;
@@ -30,8 +32,11 @@ public final class Screen {
 	public boolean dark;
 
 	// Buttons (x, y, w, h in canvas units), set by draw.
-	public final float[] btnMenu = { 40, 24, 64, 64 }, btnRefresh = { 654, 24, 64, 64 }, btnCity = { 40, 0, 64, 64 };
-	public float cityTop = 104, cityBottom = 160;
+	public final float[] btnMenu = { 40, 24, 64, 64 }, btnRefresh = { 654, 24, 64, 64 }, btnCity = { 40, 0, 64, 64 },
+			cityArea = { 40, 104, 380, 56 };
+
+	/** Canvas width: 758 in portrait, wider in landscape. */
+	private float cw = W;
 
 	private Gfx g;
 	private Palette c = Palette.LIGHT;
@@ -58,19 +63,28 @@ public final class Screen {
 			"drizzle 26 21 174 158", "fog 25 28 176 176", "partly-day 8 8 183 157", "partly-night 31 24 183 157",
 			"rain 26 17 174 179", "snow 26 17 174 182", "thunder 26 17 174 197" };
 
-	public void draw(Gfx gfx, float ch) {
+	/** Draws the screen on a canvas CW x CH: landscape when it is wider than high. */
+	public void draw(Gfx gfx, float cw, float ch) {
 		g = gfx;
 		c = dark ? Palette.DARK : Palette.LIGHT;
-		g.rect(0, 0, W, ch, c.page);
+		this.cw = cw;
+		g.rect(0, 0, cw, ch, c.page);
 		button(btnMenu);
 		for (int k = 0; k < 3; k++) g.rect(57, 41 + k * 13, 30, 4, c.ink);
+		float rx = cw - 104;
+		btnRefresh[0] = rx;
 		button(btnRefresh);
-		g.arc(686, 56, 15, -50, 290, 4, c.ink);
+		g.arc(rx + 32, 56, 15, -50, 290, 4, c.ink);
 		// Arrowhead at the arc's start (upper right), pointing along the circle.
-		g.poly(new float[] { 690, 33, 705, 46, 689, 52 }, c.ink);
+		g.poly(new float[] { rx + 36, 33, rx + 51, 46, rx + 35, 52 }, c.ink);
 		drawClock();
-		rtext(false, 26, 71, 641, T.date(now), c.ink);
+		rtext(false, 26, 71, cw - 117, T.date(now), c.ink);
+		if (cw > ch) drawLandscape(ch);
+		else drawPortrait(ch);
+	}
 
+	private void drawPortrait(float ch) {
+		cityArea[0] = 40; cityArea[1] = 104; cityArea[2] = 380; cityArea[3] = 56;
 		float fb = ch - 76;
 		btnCity[1] = fb;
 		if (w == null) {
@@ -119,6 +133,97 @@ public final class Screen {
 		drawDayCols(2, y0 + 526);
 		drawSunBox(40, y0 + 690, 678, 184);
 		footer(fb);
+	}
+
+	/** Landscape: current weather on the left, precipitation and sun in the middle, the days on the right. */
+	private void drawLandscape(float ch) {
+		float fb = ch - 76;
+		btnCity[1] = fb;
+		float rightX = cw - 40 - 462, midX = rightX - 20 - 460, leftR = midX - 24;
+		g.rect(40, 102, cw - 80, 2, c.line);
+		String label = city != null ? city.label() : "";
+		float lp = fit(true, 40, cw - 124 - 380, label);
+		ltext(true, lp, 56 - lp * 0.5f, 124, label, c.ink);
+		cityArea[0] = 124; cityArea[1] = 24; cityArea[2] = Math.max(200, g.width(true, lp, label)); cityArea[3] = 64;
+		if (w == null) {
+			String msg = error.length() > 0 ? error : T.loading;
+			ctext(true, fit(true, 40, cw - 200, msg), 330, cw / 2, msg, c.ink);
+			footer(fb);
+			return;
+		}
+		float nowTop = 104 + 12 + drawWarningsRow(40, 116, leftR - 40);
+		float fy = 568;
+		String[] d = T.describe(w.code, w.isDay);
+		drawNowSide(d[0], 40, nowTop - 60, leftR, fy + 4);
+		rtext(true, fit(true, 39, (leftR - 40) / 2, d[1]), fy, leftR - 6, d[1], c.ink);
+		if (!Double.isNaN(w.wind)) {
+			String wind = unitF ? T.wind + " " + Math.round(w.wind * 0.621371) + " mph" : T.wind + " " + Math.round(w.wind) + " km/h";
+			rtext(false, 30, fy + 40, leftR - 6, upper(wind), c.ink);
+		}
+		if (!Double.isNaN(w.feels)) ltext(false, 30, fy + 7, 40, upper(T.feels + " " + t(w.feels) + "°"), c.ink);
+		if (!Double.isNaN(w.tmax) && !Double.isNaN(w.tmin))
+			ltext(false, 30, fy + 40, 40, upper(T.hi + " " + t(w.tmax) + "° / " + T.lo + " " + t(w.tmin) + "°"), c.ink);
+
+		drawPrecipBox(midX, 116, 460, 330, 46);
+		drawSunBox(midX, 460, 460, 200);
+		drawDayRow(rightX, 116, 462, 170, 0, T.day1);
+		drawDayRow(rightX, 300, 462, 170, 1, T.day2);
+		for (int col = 0; col < 3; col++) {
+			float x = rightX + col * 158, cx = x + 73, top = 484;
+			box(x, top, 146, 176, 44);
+			int k = 2 + col;
+			if (k >= w.dayDates.size()) continue;
+			head(top, 44, cx, 130, T.weekdayUp(w.dayDates.get(k), true), 0);
+			drawIcon(T.describe(w.dayCodes.get(k), true)[0], cx - 32, top + 50, 64);
+			String s = t(w.dayHi.get(k)) + "° / " + t(w.dayLo.get(k)) + "°";
+			float p = fit(true, 34, 132, s);
+			ctext(true, p, top + 122 + (34 - p) * 6 / 10, cx, s, c.ink);
+		}
+		footer(fb);
+	}
+
+	/** A wide day card: title band, then the icon, "high° / low°" and the description beside it. */
+	private void drawDayRow(float x, float top, float wd, float h, int k, String title) {
+		box(x, top, wd, h, 44);
+		head(top, 44, x + wd / 2, wd - 40, title, 0);
+		if (k >= w.dayDates.size()) return;
+		String[] d = T.describe(w.dayCodes.get(k), true);
+		drawIcon(d[0], x + 20, top + 56, 104);
+		String hi = t(w.dayHi.get(k)) + "°", lo = " / " + t(w.dayLo.get(k)) + "°";
+		float hp = 64, lp = 36;
+		ltext(true, hp, top + 54, x + 140, hi, c.ink);
+		ltext(false, lp, top + 54 + (hp - lp) * 81 / 100, x + 140 + g.width(true, hp, hi), lo, c.dim);
+		ltext(false, fit(false, 28, wd - 160, d[1]), top + 124, x + 142, d[1], c.ink);
+	}
+
+	/**
+	 * Landscape warnings: up to two side by side at the top of the weather column, each a code
+	 * pill with the type and the period under it. Returns the height used (0 without warnings).
+	 */
+	private float drawWarningsRow(float x0, float y, float wd) {
+		if (warns == null) return 0;
+		long nowMs = now.getTimeInMillis();
+		float colW = (wd - 20) / 2, x = x0;
+		int shown = 0;
+		for (Warnings.Warn wr : warns) {
+			if (wr.until <= nowMs || shown >= 2) continue;
+			String name = T.warn[Math.min(3, Math.max(1, wr.level)) - 1];
+			String lab = T.en ? name + " " + T.warnCode : T.warnCode + " " + name;
+			String txt = T.warnType(wr.type);
+			String per = T.weekdayTime(wr.from, clk12) + " – " + T.weekdayTime(wr.until, clk12);
+			float lp = fit(true, 39, colW - 70, lab);
+			float bw = g.width(true, lp, lab) + 14;
+			int fill = wr.level >= 3 ? c.warnR : wr.level == 2 ? c.warnO : c.warnY;
+			g.roundRect(x, y, bw, 42, 12, c.line);
+			g.roundRect(x + 2, y + 2, bw - 4, 38, 10, fill);
+			ltext(true, lp, y + (42 - lp) / 2, x + 7, lab, c.pillInk);
+			if (wr.level >= 3) g.icon("ui/atentie.png", x + bw + 10, y, 46, 42, dark ? c.warnR : c.ink);
+			ltext(false, fit(false, 31, colW, txt), y + 50, x + 3, txt, c.ink);
+			ltext(false, fit(false, 30, colW, per), y + 79, x + 3, per, c.dim);
+			x += colW + 20;
+			shown++;
+		}
+		return shown > 0 ? 116 : 0;
 	}
 
 	// --- Helpers ---------------------------------------------------------------------
@@ -178,7 +283,7 @@ public final class Screen {
 
 	private void drawClock() {
 		int h = now.get(Calendar.HOUR_OF_DAY), m = now.get(Calendar.MINUTE);
-		float right = 635;
+		float right = cw - 123;
 		if (clk12) {
 			String pm = h < 12 ? "AM" : "PM";
 			int h12 = h % 12 == 0 ? 12 : h % 12;
@@ -338,10 +443,11 @@ public final class Screen {
 		boolean snow = w.snowMaj || ((w.wetNow() || w.precip > 0) && Weather.snowCode(w.code));
 		box(pl, pt, pw, ph, phd);
 		head(pt, phd, pl + pw / 2, pw - 40, (snow ? T.snowUp : T.rainUp) + " · " + T.next12, 0);
-		String rt = rainText();
-		if (rt.length() > 0) ltext(true, 36, pt + 63, pl + 22, rt, c.ink);
-		else ltext(true, 36, pt + 63, pl + 22, T.noPrecip, c.dim);
-		rtext(false, 29, pt + 68, pl + pw - 20, T.max + " " + w.rainMaxP + "%", c.dim);
+		String rt = rainText(), mx = T.max + " " + w.rainMaxP + "%";
+		float room = pw - 42 - g.width(false, 29, mx) - 16;
+		if (rt.length() > 0) ltext(true, fit(true, 36, room, rt), pt + 63, pl + 22, rt, c.ink);
+		else ltext(true, fit(true, 36, room, T.noPrecip), pt + 63, pl + 22, T.noPrecip, c.dim);
+		rtext(false, 29, pt + 68, pl + pw - 20, mx, c.dim);
 		boolean leg = false;
 		for (boolean s : w.snowy) leg |= s;
 		if (leg) {
@@ -442,10 +548,11 @@ public final class Screen {
 		box(x, top, w3, h, 46);
 		float c1 = x + w3 / 6, c2 = x + w3 / 2, c3 = x + w3 * 5 / 6;
 		float p = 31;
-		for (String s : new String[] { T.sun, T.uvT, T.pollen }) p = fit(true, p, 200, s);
-		head(top, 46, c1, 200, T.sun, p);
-		head(top, 46, c2, 200, T.uvT, p);
-		head(top, 46, c3, 200, T.pollen, p);
+		float hw = Math.min(200, w3 / 3 - 16);
+		for (String s : new String[] { T.sun, T.uvT, T.pollen }) p = fit(true, p, hw, s);
+		head(top, 46, c1, hw, T.sun, p);
+		head(top, 46, c2, hw, T.uvT, p);
+		head(top, 46, c3, hw, T.pollen, p);
 		for (float dx : new float[] { x + w3 / 3, x + w3 * 2 / 3 }) g.rect(dx - 1, top + 60, 2, h - 76, c.line);
 		ctext(false, 20, top + 54, c1, T.sunrise, c.ink);
 		ctext(true, 29, top + 78, c1, Texts.clock(this.w.sunrise, clk12), c.ink);
@@ -476,10 +583,10 @@ public final class Screen {
 	private void footer(float fb) {
 		button(btnCity);
 		g.icon("icons/btn-city.png", 56, fb + 16, 32, 32, c.ink);
-		float batLeft = 718;
+		float batLeft = cw - 40;
 		float gy = fb + 22;
 		if (batt >= 0) {
-			float gx = 718 - 44;
+			float gx = cw - 40 - 44;
 			g.rect(gx, gy, 40, 20, c.ink);
 			g.rect(gx + 2, gy + 2, 36, 16, c.page);
 			g.rect(gx + 5, gy + 5, Math.max(2, batt * 30 / 100), 10, c.ink);
