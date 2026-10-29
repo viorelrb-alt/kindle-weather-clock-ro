@@ -61,10 +61,17 @@ public final class Preview {
 			return (float) font(b, px).getStringBounds(s, g.getFontRenderContext()).getWidth();
 		}
 
-		public void image(String a, float x, float y, float w, float h) {
+		public void icon(String a, float x, float y, float w, float h, int c) {
 			try {
 				BufferedImage im = ImageIO.read(new File(assets, a));
-				g.drawImage(im, Math.round(x), Math.round(y), Math.round(w), Math.round(h), null);
+				BufferedImage m = new BufferedImage(im.getWidth(), im.getHeight(), BufferedImage.TYPE_INT_ARGB);
+				for (int j = 0; j < im.getHeight(); j++)
+					for (int i = 0; i < im.getWidth(); i++) {
+						int p = im.getRGB(i, j);
+						int lum = (((p >> 16) & 255) * 299 + ((p >> 8) & 255) * 587 + (p & 255) * 114) / 1000;
+						m.setRGB(i, j, ((255 - lum) * (p >>> 24) / 255) << 24 | (c & 0xFFFFFF));
+					}
+				g.drawImage(m, Math.round(x), Math.round(y), Math.round(w), Math.round(h), null);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -107,6 +114,7 @@ public final class Preview {
 		s.T = new Texts(opts.contains(" en"));
 		s.unitF = opts.contains(" F");
 		s.clk12 = opts.contains(" 12h");
+		s.dark = opts.contains(" dark");
 		s.w = Weather.parse(fetch(Weather.forecastUrl(s.city.lat, s.city.lon, "Europe/Bucharest"), "forecast.json"));
 		Object[] pol = Weather.parsePollen(fetch(Weather.pollenUrl(s.city.lat, s.city.lon), "pollen.json"));
 		s.pollenLvl = (Integer) pol[0];
@@ -142,7 +150,7 @@ public final class Preview {
 		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 		g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-		g.setColor(Color.WHITE);
+		g.setColor(new Color(s.dark ? 0x262624 : 0xFFFFFF));
 		g.fillRect(0, 0, pw, ph);
 		g.translate((pw - Screen.W * scale) / 2, 0);
 		g.scale(scale, scale);

@@ -16,8 +16,11 @@ public interface Gfx {
 
 	float width(boolean bold, float px, String s);
 
-	/** An image of the app's assets (icons/…, ui/…) scaled to W x H. */
-	void image(String asset, float x, float y, float w, float h);
+	/**
+	 * A black-on-white image of the app's assets (icons/…, ui/…) scaled to W x H and drawn in
+	 * COLOR: the dark pixels are the shape, white is see-through.
+	 */
+	void icon(String asset, float x, float y, float w, float h, int color);
 
 	void arc(float cx, float cy, float r, float startDeg, float sweepDeg, float stroke, int color);
 

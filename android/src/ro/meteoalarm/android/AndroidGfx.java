@@ -63,12 +63,12 @@ final class AndroidGfx implements Gfx {
 		return font(b, px).measureText(s);
 	}
 
-	public void image(String asset, float x, float y, float w, float h) {
+	public void icon(String asset, float x, float y, float w, float h, int color) {
 		Bitmap b = bitmaps.get(asset);
 		if (b == null) {
 			try {
 				InputStream in = assets.open(asset);
-				b = BitmapFactory.decodeStream(in);
+				b = mask(BitmapFactory.decodeStream(in));
 				in.close();
 			} catch (Exception e) {
 				return;
@@ -77,7 +77,24 @@ final class AndroidGfx implements Gfx {
 		}
 		src.set(0, 0, b.getWidth(), b.getHeight());
 		rf.set(x, y, x + w, y + h);
+		bmp.setColor(color);
 		c.drawBitmap(b, src, rf, bmp);
+	}
+
+	/** Alpha mask of a black-on-white image: dark pixels opaque, white transparent. */
+	private static Bitmap mask(Bitmap src) {
+		int w = src.getWidth(), h = src.getHeight();
+		int[] px = new int[w * h];
+		src.getPixels(px, 0, w, 0, 0, w, h);
+		for (int k = 0; k < px.length; k++) {
+			int p = px[k];
+			int lum = (((p >> 16) & 255) * 299 + ((p >> 8) & 255) * 587 + (p & 255) * 114) / 1000;
+			int a = (255 - lum) * (p >>> 24) / 255;
+			px[k] = a << 24;
+		}
+		Bitmap m = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+		m.setPixels(px, 0, w, 0, 0, w, h);
+		return m.extractAlpha();
 	}
 
 	public void arc(float cx, float cy, float r, float start, float sweep, float width, int color) {

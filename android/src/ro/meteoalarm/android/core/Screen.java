@@ -26,12 +26,32 @@ public final class Screen {
 	public boolean charging, busy, offline;
 	public long fetched;
 	public String error = "";
+	/** Dark theme with the Claude app's colours; otherwise black and white like the Kindle. */
+	public boolean dark;
 
 	// Buttons (x, y, w, h in canvas units), set by draw.
 	public final float[] btnMenu = { 40, 24, 64, 64 }, btnRefresh = { 654, 24, 64, 64 }, btnCity = { 40, 0, 64, 64 };
 	public float cityTop = 104, cityBottom = 160;
 
 	private Gfx g;
+	private Palette c = Palette.LIGHT;
+
+	/** The colours of a theme, by role. */
+	static final class Palette {
+		final int page, ink, dim, line, band, card, btn, dry, snow, rain, accent, warnY, warnO, warnR, pillInk;
+
+		Palette(int... v) {
+			page = v[0]; ink = v[1]; dim = v[2]; line = v[3]; band = v[4]; card = v[5]; btn = v[6]; dry = v[7];
+			snow = v[8]; rain = v[9]; accent = v[10]; warnY = v[11]; warnO = v[12]; warnR = v[13]; pillInk = v[14];
+		}
+
+		// Kindle: black on white with three grays; orange and red codes are the darker gray.
+		static final Palette LIGHT = new Palette(Gfx.WHITE, Gfx.BLACK, Gfx.GRAY5, Gfx.BLACK, Gfx.GRAYD, Gfx.WHITE, Gfx.WHITE,
+				Gfx.GRAYA, Gfx.GRAY5, Gfx.BLACK, Gfx.BLACK, Gfx.GRAYD, Gfx.GRAYA, Gfx.GRAYA, Gfx.BLACK);
+		// Claude dark: warm charcoal, ivory text, terracotta accent; the codes in muted real colours.
+		static final Palette DARK = new Palette(0xFF262624, 0xFFFAF9F5, 0xFFA6A39A, 0xFF4A4944, 0xFF3A3935, 0xFF30302E,
+				0xFF30302E, 0xFF4F4E4A, 0xFFC2C0B6, 0xFFD97757, 0xFFD97757, 0xFFE3B341, 0xFFD97757, 0xFFD14D4D, 0xFF262624);
+	}
 
 	// Middle of the weather icon's drawing inside its 200 x 200 file (icons/centru.txt).
 	private static final String[] CENTRE = { "clear-day 24 24 177 177", "clear-night 38 38 144 163", "cloudy 26 59 174 136",
@@ -40,34 +60,35 @@ public final class Screen {
 
 	public void draw(Gfx gfx, float ch) {
 		g = gfx;
-		g.rect(0, 0, W, ch, Gfx.WHITE);
+		c = dark ? Palette.DARK : Palette.LIGHT;
+		g.rect(0, 0, W, ch, c.page);
 		button(btnMenu);
-		for (int k = 0; k < 3; k++) g.rect(57, 41 + k * 13, 30, 4, Gfx.BLACK);
+		for (int k = 0; k < 3; k++) g.rect(57, 41 + k * 13, 30, 4, c.ink);
 		button(btnRefresh);
-		g.arc(686, 56, 15, -50, 290, 4, Gfx.BLACK);
+		g.arc(686, 56, 15, -50, 290, 4, c.ink);
 		// Arrowhead at the arc's start (upper right), pointing along the circle.
-		g.poly(new float[] { 690, 33, 705, 46, 689, 52 }, Gfx.BLACK);
+		g.poly(new float[] { 690, 33, 705, 46, 689, 52 }, c.ink);
 		drawClock();
-		rtext(false, 26, 71, 641, T.date(now), Gfx.BLACK);
+		rtext(false, 26, 71, 641, T.date(now), c.ink);
 
 		float fb = ch - 76;
 		btnCity[1] = fb;
 		if (w == null) {
-			g.rect(40, 102, 678, 2, Gfx.BLACK);
+			g.rect(40, 102, 678, 2, c.line);
 			String msg = error.length() > 0 ? error : T.loading;
 			float p = fit(true, 40, 640, msg);
-			ctext(true, p, 300, W / 2, msg, Gfx.BLACK);
+			ctext(true, p, 300, W / 2, msg, c.ink);
 			footer(fb);
 			return;
 		}
 
 		String label = city.label();
-		ltext(true, fit(true, 36, 340, label), 116, 40, label, Gfx.BLACK);
+		ltext(true, fit(true, 36, 340, label), 116, 40, label, c.ink);
 
 		float nowBot = 498 + Math.max(0, ch - BASE_H);
 		float fy = nowBot - 4;
 		int shown = drawWarnings();
-		g.rect(40, 102, hdrEnd - 40, 2, Gfx.BLACK);
+		g.rect(40, 102, hdrEnd - 40, 2, c.line);
 
 		String[] d = T.describe(w.code, w.isDay);
 		if (shown == 0) {
@@ -82,14 +103,14 @@ public final class Screen {
 		}
 
 		// Description and wind on the right, "feels like" and high / low on the left.
-		rtext(true, fit(true, 39, 330, d[1]), fy, 712, d[1], Gfx.BLACK);
+		rtext(true, fit(true, 39, 330, d[1]), fy, 712, d[1], c.ink);
 		if (!Double.isNaN(w.wind)) {
 			String wind = unitF ? T.wind + " " + Math.round(w.wind * 0.621371) + " mph" : T.wind + " " + Math.round(w.wind) + " km/h";
-			rtext(false, 30, fy + 40, 712, upper(wind), Gfx.BLACK);
+			rtext(false, 30, fy + 40, 712, upper(wind), c.ink);
 		}
-		if (!Double.isNaN(w.feels)) ltext(false, 30, fy + 7, 40, upper(T.feels + " " + t(w.feels) + "°"), Gfx.BLACK);
+		if (!Double.isNaN(w.feels)) ltext(false, 30, fy + 7, 40, upper(T.feels + " " + t(w.feels) + "°"), c.ink);
 		if (!Double.isNaN(w.tmax) && !Double.isNaN(w.tmin))
-			ltext(false, 30, fy + 40, 40, upper(T.hi + " " + t(w.tmax) + "° / " + T.lo + " " + t(w.tmin) + "°"), Gfx.BLACK);
+			ltext(false, 30, fy + 40, 40, upper(T.hi + " " + t(w.tmax) + "° / " + T.lo + " " + t(w.tmin) + "°"), c.ink);
 
 		float y0 = fy + 80;
 		drawPrecipBox(40, y0, 678, 300, 46);
@@ -112,8 +133,8 @@ public final class Screen {
 	}
 
 	private void button(float[] b) {
-		g.roundRect(b[0], b[1], b[2], b[3], 10, Gfx.BLACK);
-		g.roundRect(b[0] + 2, b[1] + 2, b[2] - 4, b[3] - 4, 8, Gfx.WHITE);
+		g.roundRect(b[0], b[1], b[2], b[3], 10, c.line);
+		g.roundRect(b[0] + 2, b[1] + 2, b[2] - 4, b[3] - 4, 8, c.btn);
 	}
 
 	private void ltext(boolean bold, float px, float top, float left, String s, int color) {
@@ -141,18 +162,18 @@ public final class Screen {
 	private void head(float top, float h, float cx, float maxw, String s, float px) {
 		float p = fit(true, px > 0 ? px : (h - 4) * 76 / 100, maxw - 1, s);
 		float x = cx - g.width(true, p, s) / 2, y = top + h / 2 - p * 485 / 1000;
-		g.text(true, p, y, x, s, Gfx.BLACK);
-		g.text(true, p, y, x + 1, s, Gfx.BLACK);
+		g.text(true, p, y, x, s, c.ink);
+		g.text(true, p, y, x + 1, s, c.ink);
 	}
 
 	/** Frame with rounded corners, a 2-unit outline and a gray header band HD high. */
 	private void box(float x, float y, float w, float h, float hd) {
 		float r = 14;
-		g.roundRect(x, y, w, h, r, Gfx.BLACK);
-		g.roundRect(x + 2, y + 2, w - 4, h - 4, r - 2, Gfx.GRAYD);
-		g.rect(x + 2, y + hd, w - 4, h - hd - r - 2, Gfx.WHITE);
-		g.roundRect(x + 2, y + h - 2 * r - 2, w - 4, 2 * r, r - 2, Gfx.WHITE);
-		g.rect(x + 2, y + hd - 2, w - 4, 2, Gfx.BLACK);
+		g.roundRect(x, y, w, h, r, c.line);
+		g.roundRect(x + 2, y + 2, w - 4, h - 4, r - 2, c.band);
+		g.rect(x + 2, y + hd, w - 4, h - hd - r - 2, c.card);
+		g.roundRect(x + 2, y + h - 2 * r - 2, w - 4, 2 * r, r - 2, c.card);
+		g.rect(x + 2, y + hd - 2, w - 4, 2, c.line);
 	}
 
 	private void drawClock() {
@@ -162,10 +183,10 @@ public final class Screen {
 			String pm = h < 12 ? "AM" : "PM";
 			int h12 = h % 12 == 0 ? 12 : h % 12;
 			float pw = g.width(true, 22, pm);
-			rtext(true, 50, 17, right - pw - 4, h12 + String.format(":%02d", m), Gfx.BLACK);
-			ltext(true, 22, 17 + 50 * 81 / 100 - 18, right - pw, pm, Gfx.BLACK);
+			rtext(true, 50, 17, right - pw - 4, h12 + String.format(":%02d", m), c.ink);
+			ltext(true, 22, 17 + 50 * 81 / 100 - 18, right - pw, pm, c.ink);
 		} else {
-			rtext(true, 50, 17, right, String.format("%02d:%02d", h, m), Gfx.BLACK);
+			rtext(true, 50, 17, right, String.format("%02d:%02d", h, m), c.ink);
 		}
 	}
 
@@ -175,7 +196,7 @@ public final class Screen {
 	private boolean icFit;
 
 	private void drawIcon(String icon, float x, float y, float s) {
-		g.image("icons/" + icon + ".png", x, y, s, s);
+		g.icon("icons/" + icon + ".png", x, y, s, s, c.ink);
 	}
 
 	/**
@@ -235,13 +256,13 @@ public final class Screen {
 		float dh = tp * 64 / 100, x = left;
 		if (tNeg) {
 			float mt = Math.max(4, dh * 75 / 1000);
-			g.rect(x, base - dh / 2 - mt / 2, dh * 30 / 100, mt, Gfx.BLACK);
+			g.rect(x, base - dh / 2 - mt / 2, dh * 30 / 100, mt, c.ink);
 			x += tMw;
 		}
-		g.text(true, tp, base - tp * 81 / 100, x, tN, Gfx.BLACK);
+		g.text(true, tp, base - tp * 81 / 100, x, tN, c.ink);
 		x += tWn + tGap;
-		g.text(true, tU, base - dh - tU * 17 / 100, x, "°", Gfx.BLACK);
-		g.text(true, tU, base - tU * 81 / 100, x, unitF ? "F" : "C", Gfx.BLACK);
+		g.text(true, tU, base - dh - tU * 17 / 100, x, "°", c.ink);
+		g.text(true, tU, base - tU * 81 / 100, x, unitF ? "F" : "C", c.ink);
 		tempEnd = x + tWu;
 	}
 
@@ -277,18 +298,18 @@ public final class Screen {
 			float lp = fit(true, 39, 330, lab);
 			float bw = g.width(true, lp, lab) + 14;
 			float txp = fit(false, 31, 330, txt);
-			int fill = wr.level >= 2 ? Gfx.GRAYA : Gfx.GRAYD;
+			int fill = wr.level >= 3 ? c.warnR : wr.level == 2 ? c.warnO : c.warnY;
 			float sx = 718 - bw;
 			if (wr.level >= 3) {
 				sx -= 56;
-				g.image("ui/atentie.png", sx, wy, 46, 42);
+				g.icon("ui/atentie.png", sx, wy, 46, 42, dark ? c.warnR : c.ink);
 			}
 			if (shown == 0) hdrEnd = sx - 6;
-			g.roundRect(718 - bw, wy, bw, 42, 12, Gfx.BLACK);
+			g.roundRect(718 - bw, wy, bw, 42, 12, c.line);
 			g.roundRect(718 - bw + 2, wy + 2, bw - 4, 38, 10, fill);
-			ltext(true, lp, wy + (42 - lp) / 2, 718 - bw + 7, lab, Gfx.BLACK);
-			rtext(false, txp, wy + 50, 716, txt, Gfx.BLACK);
-			rtext(false, 30, wy + 79, 712, per, Gfx.GRAY5);
+			ltext(true, lp, wy + (42 - lp) / 2, 718 - bw + 7, lab, c.pillInk);
+			rtext(false, txp, wy + 50, 716, txt, c.ink);
+			rtext(false, 30, wy + 79, 712, per, c.dim);
 			wy += 116;
 			warnBot = wy - 6;
 			shown++;
@@ -318,9 +339,9 @@ public final class Screen {
 		box(pl, pt, pw, ph, phd);
 		head(pt, phd, pl + pw / 2, pw - 40, (snow ? T.snowUp : T.rainUp) + " · " + T.next12, 0);
 		String rt = rainText();
-		if (rt.length() > 0) ltext(true, 36, pt + 63, pl + 22, rt, Gfx.BLACK);
-		else ltext(true, 36, pt + 63, pl + 22, T.noPrecip, Gfx.GRAY5);
-		rtext(false, 29, pt + 68, pl + pw - 20, T.max + " " + w.rainMaxP + "%", Gfx.GRAY5);
+		if (rt.length() > 0) ltext(true, 36, pt + 63, pl + 22, rt, c.ink);
+		else ltext(true, 36, pt + 63, pl + 22, T.noPrecip, c.dim);
+		rtext(false, 29, pt + 68, pl + pw - 20, T.max + " " + w.rainMaxP + "%", c.dim);
 		boolean leg = false;
 		for (boolean s : w.snowy) leg |= s;
 		if (leg) {
@@ -332,11 +353,11 @@ public final class Screen {
 	}
 
 	private void drawLegend(float x, float y) {
-		int[] cs = { Gfx.GRAY5, Gfx.BLACK, Gfx.GRAYA };
+		int[] cs = { c.snow, c.rain, c.dry };
 		String[] ls = { T.legSnow, T.legRain, T.legDry };
 		for (int k = 0; k < 3; k++) {
 			g.rect(x, y, 16, 16, cs[k]);
-			ltext(false, 20, y - 2, x + 23, ls[k], Gfx.GRAY5);
+			ltext(false, 20, y - 2, x + 23, ls[k], c.dim);
 			x += 23 + g.width(false, 20, ls[k]) + 22;
 		}
 	}
@@ -347,13 +368,13 @@ public final class Screen {
 		if (n == 0) return;
 		float pitch = (float) Math.floor(cw / n), bw = pitch * 85 / 100;
 		float ty = ct + ch - Weather.RAIN_PROBABILITY * ch / 100;
-		for (float x = cl; x < cl + cw; x += 10) g.rect(x, ty, 5, 2, Gfx.GRAY5);
+		for (float x = cl; x < cl + cw; x += 10) g.rect(x, ty, 5, 2, c.dim);
 		for (int k = 0; k < n; k++) {
 			float bh = Math.max(4, w.probs[k] * ch / 100);
-			int color = !w.wet[k] ? Gfx.GRAYA : w.snowy[k] ? Gfx.GRAY5 : Gfx.BLACK;
+			int color = !w.wet[k] ? c.dry : w.snowy[k] ? c.snow : c.rain;
 			float x = cl + k * pitch + (pitch - bw) / 2;
 			g.rect(x, ct + ch - bh, bw, bh, color);
-			if (k % 3 == 0) ltext(false, 23, ct + ch + 8, x, Texts.clock(w.hours.get(k), clk12), Gfx.GRAY5);
+			if (k % 3 == 0) ltext(false, 23, ct + ch + 8, x, Texts.clock(w.hours.get(k), clk12), c.dim);
 		}
 		// "acum" over the chart where the current time falls, and a dotted line down to the bar.
 		String first = w.hours.get(0);
@@ -361,10 +382,10 @@ public final class Screen {
 		int o = (now.get(Calendar.HOUR_OF_DAY) - Integer.parseInt(first.substring(0, 2)) + 24) % 24;
 		if (o >= n) return;
 		float nx = cl + o * pitch + now.get(Calendar.MINUTE) * pitch / 60;
-		g.poly(new float[] { nx - 8, ct - 8, nx + 8, ct - 8, nx, ct + 3 }, Gfx.BLACK);
-		ctext(true, 15, ct - 25, nx, T.nowMark, Gfx.BLACK);
+		g.poly(new float[] { nx - 8, ct - 8, nx + 8, ct - 8, nx, ct + 3 }, c.accent);
+		ctext(true, 15, ct - 25, nx, T.nowMark, c.accent);
 		float end = ct + ch - Math.max(4, w.probs[o] * ch / 100) - 2;
-		for (float y = ct + 6; y < end; y += 10) g.rect(nx - 1, y, 2, Math.min(6, end - y), Gfx.BLACK);
+		for (float y = ct + 6; y < end; y += 10) g.rect(nx - 1, y, 2, Math.min(6, end - y), c.accent);
 	}
 
 	// --- Next days ---------------------------------------------------------------------
@@ -386,24 +407,24 @@ public final class Screen {
 		}
 		float gx = Math.max(left + 8, left + (331 - 84 - wh - 4 - wl) / 2);
 		drawIcon(d[0], gx - 10, top + 67, 92);
-		ltext(true, hp, top + 51 + (93 - hp) * 81 / 100, gx + 84, hi, Gfx.BLACK);
-		ltext(false, lp, top + 90 + (47 - lp) * 81 / 100, gx + 84 + wh + 4, lo, Gfx.GRAY5);
-		ctext(false, fit(false, 30, 310, d[1]), top + 160, left + 165, d[1], Gfx.BLACK);
+		ltext(true, hp, top + 51 + (93 - hp) * 81 / 100, gx + 84, hi, c.ink);
+		ltext(false, lp, top + 90 + (47 - lp) * 81 / 100, gx + 84 + wh + 4, lo, c.dim);
+		ctext(false, fit(false, 30, 310, d[1]), top + 160, left + 165, d[1], c.ink);
 	}
 
 	/** Three more days: weekday and date, icon, high / low, chance of rain. */
 	private void drawDayCols(int first, float top) {
-		for (int c = 0; c < 3; c++) {
-			float x = 40 + c * 231.5f;
+		for (int col = 0; col < 3; col++) {
+			float x = 40 + col * 231.5f;
 			box(x, top, 215, 150, 44);
-			int k = first + c;
+			int k = first + col;
 			if (k >= w.dayDates.size()) continue;
 			float cx = x + 107.5f;
 			head(top, 44, cx, 190, T.weekdayUp(w.dayDates.get(k), true), 0);
 			drawIcon(T.describe(w.dayCodes.get(k), true)[0], cx - 30, top + 46, 60);
 			String s = t(w.dayHi.get(k)) + "° / " + t(w.dayLo.get(k)) + "°";
 			float p = fit(true, 36, 190, s);
-			ctext(true, p, top + 104 + (36 - p) * 6 / 10, cx, s, Gfx.BLACK);
+			ctext(true, p, top + 104 + (36 - p) * 6 / 10, cx, s, c.ink);
 		}
 	}
 
@@ -412,8 +433,8 @@ public final class Screen {
 	private void scale(float x, float y, int n, int filled, float bw) {
 		for (int k = 0; k < n; k++) {
 			float sx = x + k * (bw + 4);
-			g.rect(sx, y, bw, 10, Gfx.BLACK);
-			if (k >= filled) g.rect(sx + 2, y + 2, bw - 4, 6, Gfx.WHITE);
+			g.rect(sx, y, bw, 10, c.ink);
+			if (k >= filled) g.rect(sx + 2, y + 2, bw - 4, 6, c.card);
 		}
 	}
 
@@ -425,27 +446,27 @@ public final class Screen {
 		head(top, 46, c1, 200, T.sun, p);
 		head(top, 46, c2, 200, T.uvT, p);
 		head(top, 46, c3, 200, T.pollen, p);
-		for (float dx : new float[] { x + w3 / 3, x + w3 * 2 / 3 }) g.rect(dx - 1, top + 60, 2, h - 76, Gfx.GRAYA);
-		ctext(false, 20, top + 54, c1, T.sunrise, Gfx.BLACK);
-		ctext(true, 29, top + 78, c1, Texts.clock(this.w.sunrise, clk12), Gfx.BLACK);
-		ctext(false, 20, top + 121, c1, T.sunset, Gfx.BLACK);
-		ctext(true, 29, top + 145, c1, Texts.clock(this.w.sunset, clk12), Gfx.BLACK);
+		for (float dx : new float[] { x + w3 / 3, x + w3 * 2 / 3 }) g.rect(dx - 1, top + 60, 2, h - 76, c.line);
+		ctext(false, 20, top + 54, c1, T.sunrise, c.ink);
+		ctext(true, 29, top + 78, c1, Texts.clock(this.w.sunrise, clk12), c.ink);
+		ctext(false, 20, top + 121, c1, T.sunset, c.ink);
+		ctext(true, 29, top + 145, c1, Texts.clock(this.w.sunset, clk12), c.ink);
 		int uv = this.w.uv;
 		if (uv >= 0) {
 			int l = uv <= 2 ? 1 : uv <= 5 ? 2 : uv <= 7 ? 3 : uv <= 10 ? 4 : 5;
-			ctext(true, 74, top + 50, c2, Integer.toString(uv), Gfx.BLACK);
-			ctext(false, 22, top + 128, c2, T.uvLv[l - 1], Gfx.BLACK);
+			ctext(true, 74, top + 50, c2, Integer.toString(uv), c.ink);
+			ctext(false, 22, top + 128, c2, T.uvLv[l - 1], c.ink);
 			scale(c2 - 60, top + 162, 5, l, 21);
 		} else {
-			ctext(true, 74, top + 50, c2, "–", Gfx.BLACK);
+			ctext(true, 74, top + 50, c2, "–", c.ink);
 			scale(c2 - 60, top + 162, 5, 0, 21);
 		}
 		if (pollenLvl > 0) {
-			ctext(true, 29, top + 62, c3, T.polLv[pollenLvl - 1], Gfx.BLACK);
-			ctext(false, 22, top + 103, c3, pollenPlant.length() > 0 ? T.plant(pollenPlant) : T.noPollen, Gfx.BLACK);
+			ctext(true, 29, top + 62, c3, T.polLv[pollenLvl - 1], c.ink);
+			ctext(false, 22, top + 103, c3, pollenPlant.length() > 0 ? T.plant(pollenPlant) : T.noPollen, c.ink);
 		} else {
-			ctext(true, 29, top + 62, c3, "–", Gfx.BLACK);
-			ctext(false, 22, top + 103, c3, T.noData2, Gfx.BLACK);
+			ctext(true, 29, top + 62, c3, "–", c.ink);
+			ctext(false, 22, top + 103, c3, T.noData2, c.ink);
 		}
 		scale(c3 - 60, top + 162, 4, Math.max(0, pollenLvl), 27);
 	}
@@ -454,21 +475,21 @@ public final class Screen {
 
 	private void footer(float fb) {
 		button(btnCity);
-		g.image("icons/btn-city.png", 56, fb + 16, 32, 32);
+		g.icon("icons/btn-city.png", 56, fb + 16, 32, 32, c.ink);
 		float batLeft = 718;
 		float gy = fb + 22;
 		if (batt >= 0) {
 			float gx = 718 - 44;
-			g.rect(gx, gy, 40, 20, Gfx.BLACK);
-			g.rect(gx + 2, gy + 2, 36, 16, Gfx.WHITE);
-			g.rect(gx + 5, gy + 5, Math.max(2, batt * 30 / 100), 10, Gfx.BLACK);
-			g.rect(gx + 40, gy + 6, 4, 8, Gfx.BLACK);
-			batLeft = rtext(true, 26, gy - 4, gx - 7, batt + "%", Gfx.BLACK);
+			g.rect(gx, gy, 40, 20, c.ink);
+			g.rect(gx + 2, gy + 2, 36, 16, c.page);
+			g.rect(gx + 5, gy + 5, Math.max(2, batt * 30 / 100), 10, c.ink);
+			g.rect(gx + 40, gy + 6, 4, 8, c.ink);
+			batLeft = rtext(true, 26, gy - 4, gx - 7, batt + "%", c.ink);
 			if (charging) {
-				g.image("icons/bolt.png", batLeft - 16, gy + 2, 11, 17);
+				g.icon("icons/bolt.png", batLeft - 16, gy + 2, 11, 17, c.ink);
 				batLeft -= 16;
 				float mp = fit(true, 26, batLeft - 10 - 330, T.charging);
-				batLeft = rtext(true, mp, gy - 4 + (26 - mp) * 81 / 100, batLeft - 10, T.charging, Gfx.BLACK);
+				batLeft = rtext(true, mp, gy - 4 + (26 - mp) * 81 / 100, batLeft - 10, T.charging, c.ink);
 			}
 		}
 		String upd = "";
@@ -476,9 +497,9 @@ public final class Screen {
 		if (busy) {
 			upd = T.updating;
 		} else if (fetched > 0) {
-			Calendar c = Calendar.getInstance();
-			c.setTimeInMillis(fetched);
-			String when = Texts.clock(String.format("%02d:%02d", c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE)), clk12);
+			Calendar cal = Calendar.getInstance();
+			cal.setTimeInMillis(fetched);
+			String when = Texts.clock(String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE)), clk12);
 			upd = T.updated + " " + when;
 			if (offline) {
 				upd = "! " + T.noData + " " + when;
@@ -487,7 +508,7 @@ public final class Screen {
 		}
 		if (upd.length() > 0) {
 			float up = fit(bold, 27, batLeft - 123 - 14, upd);
-			ltext(bold, up, fb + 26, 123, upd, bold ? Gfx.BLACK : Gfx.GRAY5);
+			ltext(bold, up, fb + 26, 123, upd, bold ? c.ink : c.dim);
 		}
 	}
 }

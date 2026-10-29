@@ -40,7 +40,7 @@ final class WeatherView extends View {
 			ch = Screen.BASE_H;
 		}
 		ox = (w - Screen.W * scale) / 2;
-		c.drawColor(0xFFFFFFFF);
+		c.drawColor(screen.dark ? 0xFF262624 : 0xFFFFFFFF);
 		c.save();
 		c.translate(ox, 0);
 		c.scale(scale, scale);

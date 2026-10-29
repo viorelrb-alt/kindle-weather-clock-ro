@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,7 +36,7 @@ import ro.meteoalarm.android.core.Weather;
  * while the app is open (every hour at night) and kept on disk, so it opens at once offline.
  */
 public final class MainActivity extends Activity implements WeatherView.Taps {
-	static final String VERSION = "Meteo Alarm Android v0.1";
+	static final String VERSION = "Meteo Alarm Android v0.11";
 	private static final long WEATHER_MS = 15 * 60000L, NIGHT_MS = 60 * 60000L;
 
 	private WeatherView view;
@@ -96,8 +97,21 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		if (c == null) c = cities.find("Călărași");
 		if (c == null) c = new Cities.City("Călărași", "Călărași", 44.2058, 27.3306);
 		s.city = c;
+		// Theme: "light" (Kindle), "dark" (Claude colours) or "auto" (follows the phone's dark mode).
+		String theme = prefs.getString("theme", "auto");
+		boolean night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+		s.dark = theme.equals("dark") || (theme.equals("auto") && night);
+		view.setBackgroundColor(s.dark ? 0xFF262624 : 0xFFFFFFFF);
+		getWindow().getDecorView().setBackgroundColor(s.dark ? 0xFF262624 : 0xFFFFFFFF);
 		if (prefs.getBoolean("keepOn", true)) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration cfg) {
+		super.onConfigurationChanged(cfg);
+		applySettings();
+		view.invalidate();
 	}
 
 	@Override
@@ -255,7 +269,8 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 	// --- Taps --------------------------------------------------------------------------
 
 	private AlertDialog.Builder dialog() {
-		return new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
+		return new AlertDialog.Builder(this, s.dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+				: android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
 	}
 
 	private void show(AlertDialog.Builder b) {
@@ -277,10 +292,10 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		boolean keepOn = prefs.getBoolean("keepOn", true);
 		String[] items = en
 				? new String[] { "Refresh now", "Choose town", s.unitF ? "Show °C" : "Show °F", s.clk12 ? "24-hour clock" : "12-hour clock",
-						"Limba română", keepOn ? "Let the screen sleep" : "Keep the screen on", "About" }
+						"Limba română", keepOn ? "Let the screen sleep" : "Keep the screen on", "Theme…", "About" }
 				: new String[] { "Actualizează acum", "Alege localitatea", s.unitF ? "Afișează °C" : "Afișează °F",
 						s.clk12 ? "Ceas 24 de ore" : "Ceas 12 ore (AM/PM)", "English", keepOn ? "Lasă ecranul să se stingă" : "Ține ecranul aprins",
-						"Despre" };
+						"Temă…", "Despre" };
 		show(dialog().setTitle("☰").setItems(items, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface d, int k) {
 				SharedPreferences.Editor e = prefs.edit();
@@ -291,6 +306,7 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 				case 3: e.putBoolean("clk12", !s.clk12); break;
 				case 4: e.putString("lang", en ? "ro" : "en"); break;
 				case 5: e.putBoolean("keepOn", !prefs.getBoolean("keepOn", true)); break;
+				case 6: pickTheme(); return;
 				default: about(); return;
 				}
 				e.apply();
@@ -300,10 +316,25 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		}));
 	}
 
+	private void pickTheme() {
+		final String[] keys = { "light", "dark", "auto" };
+		String[] items = s.T.en ? new String[] { "Light (Kindle, black and white)", "Dark (Claude colours)", "Automatic (as the phone)" }
+				: new String[] { "Luminoasă (Kindle, alb-negru)", "Întunecată (culorile Claude)", "Automată (ca telefonul)" };
+		int cur = java.util.Arrays.asList(keys).indexOf(prefs.getString("theme", "auto"));
+		show(dialog().setTitle(s.T.en ? "Theme" : "Temă").setSingleChoiceItems(items, cur, new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface d, int k) {
+				prefs.edit().putString("theme", keys[k]).apply();
+				d.dismiss();
+				applySettings();
+				view.invalidate();
+			}
+		}));
+	}
+
 	private void about() {
 		String msg = s.T.en
-				? "Test version for phones, ported from Meteo Alarm Kindle v2.061.\n\nWeather: Open-Meteo (DWD ICON). Warnings: MeteoAlarm (ANM). Font: Liberation Sans."
-				: "Versiune de test pentru telefon, portată din Meteo Alarm Kindle v2.061.\n\nVremea: Open-Meteo (DWD ICON). Avertizări: MeteoAlarm (ANM). Font: Liberation Sans.";
+				? "Test version for phones, ported from Meteo Alarm Kindle v2.061. The dark theme uses the Claude app colours.\n\nWeather: Open-Meteo (DWD ICON). Warnings: MeteoAlarm (ANM). Font: Liberation Sans."
+				: "Versiune de test pentru telefon, portată din Meteo Alarm Kindle v2.061. Tema întunecată folosește culorile aplicației Claude.\n\nVremea: Open-Meteo (DWD ICON). Avertizări: MeteoAlarm (ANM). Font: Liberation Sans.";
 		show(dialog().setTitle(VERSION).setMessage(msg).setPositiveButton("OK", null));
 	}
 

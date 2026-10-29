@@ -11,8 +11,9 @@ OUT=build
 rm -rf "$OUT" && mkdir -p "$OUT/gen" "$OUT/classes"
 
 if [ "$1" = preview ]; then
+	shift
 	javac -nowarn -encoding UTF-8 -d "$OUT/classes" $(find src/ro/meteoalarm/android/core preview -name '*.java')
-	java -cp "$OUT/classes" ro.meteoalarm.android.preview.Preview assets "$OUT/preview.png" 1080 2340 ${2:-}
+	java -cp "$OUT/classes" ro.meteoalarm.android.preview.Preview assets "$OUT/preview.png" 1080 2340 "$@"
 	exit 0
 fi
 
