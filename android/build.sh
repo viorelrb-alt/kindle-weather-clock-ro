@@ -1,7 +1,8 @@
 #!/bin/sh
 # Builds the sideloadable APK without Gradle, with Ubuntu's Android tools:
 #   apt-get install android-sdk-platform-23 aapt dalvik-exchange zipalign apksigner
-# Output: build/MeteoAlarmAndroid-v<version>.apk, signed with debug.keystore (password "android").
+# Output: build/MeteoAlarmAndroid-v<version>.apk, signed with $KEYSTORE (default ./debug.keystore,
+# password "android"; kept out of the repository).
 # Preview of the screen on a PC (no phone needed): ./build.sh preview
 set -e
 cd "$(dirname "$0")"
@@ -25,9 +26,14 @@ dalvik-exchange --dex --output="$OUT/classes.dex" "$OUT/classes"
 aapt package -f -0 arsc -M AndroidManifest.xml -S res -A assets -I "$SDK" -F "$OUT/app.unsigned.apk"
 (cd "$OUT" && aapt add -f app.unsigned.apk classes.dex >/dev/null)
 zipalign -f -p 4 "$OUT/app.unsigned.apk" "$OUT/app.aligned.apk"
-[ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
-	-alias meteoalarm -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Meteo Alarm Android test"
-apksigner sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android \
+# The signing key is not in the repository. Every version must be signed with the same key, or it
+# will not install over (or update) the one on the phone: KEYSTORE=path/to/debug.keystore ./build.sh
+KS=${KEYSTORE:-debug.keystore}
+if [ ! -f "$KS" ]; then
+	echo "No signing key at $KS (set KEYSTORE=...)." >&2
+	exit 1
+fi
+apksigner sign --ks "$KS" --ks-pass pass:android --key-pass pass:android \
 	--out "$OUT/MeteoAlarmAndroid-v$VER.apk" "$OUT/app.aligned.apk"
 apksigner verify --print-certs "$OUT/MeteoAlarmAndroid-v$VER.apk" | head -n 2
 ls -l "$OUT/MeteoAlarmAndroid-v$VER.apk"

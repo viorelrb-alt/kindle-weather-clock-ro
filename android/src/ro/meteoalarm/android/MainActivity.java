@@ -39,7 +39,7 @@ import ro.meteoalarm.android.core.Weather;
  * while the app is open (every hour at night) and kept on disk, so it opens at once offline.
  */
 public final class MainActivity extends Activity implements WeatherView.Taps {
-	static final String VERSION = "Meteo Alarm Android v0.13";
+	static final String VERSION = "Meteo Alarm Android v0.14";
 	private static final long WEATHER_MS = 15 * 60000L, NIGHT_MS = 60 * 60000L;
 
 	private WeatherView view;
@@ -50,6 +50,8 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 	private boolean fetching, asked;
 	private long lastTry, lastLocate;
 	private Locator locator;
+	private Updater updater;
+	private static final long UPDATE_CHECK_MS = 24 * 3600000L;
 	private static final long LOCATE_MS = 60 * 60000L;
 
 	private final Runnable tick = new Runnable() {
@@ -92,6 +94,19 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 			if (c != null) cities.add(c);
 		}
 		locator = new Locator(this);
+		updater = new Updater(this, new Updater.Ui() {
+			public AlertDialog.Builder dialog() {
+				return MainActivity.this.dialog();
+			}
+
+			public void show(AlertDialog.Builder b) {
+				MainActivity.this.show(b);
+			}
+
+			public boolean en() {
+				return s.T.en;
+			}
+		});
 		applySettings();
 		loadCache();
 		setContentView(view);
@@ -135,6 +150,12 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		handler.removeCallbacks(tick);
 		handler.post(tick);
 		if (autoLoc() && !Locator.allowed(this) && !asked) askLocation();
+		// Look for a newer version once a day (a dialog only when there is one).
+		long now = System.currentTimeMillis();
+		if (now - prefs.getLong("updateChecked", 0) >= UPDATE_CHECK_MS) {
+			prefs.edit().putLong("updateChecked", now).apply();
+			updater.check(false);
+		}
 	}
 
 	// --- Location ----------------------------------------------------------------------
@@ -385,10 +406,11 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		String[] items = en
 				? new String[] { "Refresh now", "Choose town", s.unitF ? "Show °C" : "Show °F", s.clk12 ? "24-hour clock" : "12-hour clock",
 						"Limba română", keepOn ? "Let the screen sleep" : "Keep the screen on", "Theme…",
-						auto ? "Automatic location: on (turn off)" : "Automatic location: off (turn on)", "About" }
+						auto ? "Automatic location: on (turn off)" : "Automatic location: off (turn on)", "Check for updates", "About" }
 				: new String[] { "Actualizează acum", "Alege localitatea", s.unitF ? "Afișează °C" : "Afișează °F",
 						s.clk12 ? "Ceas 24 de ore" : "Ceas 12 ore (AM/PM)", "English", keepOn ? "Lasă ecranul să se stingă" : "Ține ecranul aprins",
-						"Temă…", auto ? "Localizare automată: pornită (oprește)" : "Localizare automată: oprită (pornește)", "Despre" };
+						"Temă…", auto ? "Localizare automată: pornită (oprește)" : "Localizare automată: oprită (pornește)",
+						"Verifică actualizări", "Despre" };
 		show(dialog().setTitle("☰").setItems(items, new DialogInterface.OnClickListener() {
 			public void onClick(DialogInterface d, int k) {
 				SharedPreferences.Editor e = prefs.edit();
@@ -404,6 +426,7 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 					if (autoLoc()) prefs.edit().putBoolean("autoLoc", false).apply();
 					else onLocate();
 					return;
+				case 8: updater.check(true); return;
 				default: about(); return;
 				}
 				e.apply();
@@ -432,6 +455,8 @@ public final class MainActivity extends Activity implements WeatherView.Taps {
 		String msg = s.T.en
 				? "Test version for phones, ported from Meteo Alarm Kindle v2.061. The dark theme uses the Claude app colours.\n\nWeather: Open-Meteo (DWD ICON). Warnings: MeteoAlarm (ANM). Font: Liberation Sans."
 				: "Versiune de test pentru telefon, portată din Meteo Alarm Kindle v2.061. Tema întunecată folosește culorile aplicației Claude.\n\nVremea: Open-Meteo (DWD ICON). Avertizări: MeteoAlarm (ANM). Font: Liberation Sans.";
+		msg += "\n\n" + (s.T.en ? "Installed version: v" : "Versiunea instalată: v") + updater.installed()
+				+ "\n" + (s.T.en ? "Updates: " : "Actualizări: ") + "github.com/" + ro.meteoalarm.android.core.Release.REPO + "/releases";
 		show(dialog().setTitle(VERSION).setMessage(msg).setPositiveButton("OK", null));
 	}
 
