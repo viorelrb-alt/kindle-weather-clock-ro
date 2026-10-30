@@ -6,3 +6,4 @@ extensions/meteoalarmkindle/clock.sel
 extensions/meteoalarmkindle/recent.sel
 __pycache__/
 android/build/
+*.keystore
