@@ -1,4 +1,4 @@
-METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.061)
+METEO ALARM KINDLE: ceas, vreme și avertizări pentru Kindle Paperwhite 1 (v2.062)
 
 Instalare: copiază folderul "extensions" în rădăcina Kindle-ului (Replace).
 Pornire: KUAL > Meteo Alarm Kindle > alege varianta.
@@ -61,13 +61,27 @@ Ecranul:
   „acum” cu o săgeată și o linie punctată arată ora exactă (la 14:20, o treime din bara de 14:00). Bare negre = ploaie,
   gri închis = ninsoare, gri deschis = fără precipitații.
 - Vedere simplă, fără precipitații: 3 capsule cu următoarele 3 zile. În peisaj apare și
-  3 casete separate, aliniate sub capsule: Soare (răsărit, apus), Indice UV și Polen (Open-Meteo).
+  3 casete separate, aliniate sub capsule. Ele alternează la fiecare 15 minute (ALT_BOXES=1):
+  * Soare (răsărit, apus), Indice UV (cifra, sub ea nivelul: „Scăzut” de la 0 la 2, și o scală
+    cu 5 linii) și Polen. Indicele UV apare doar ziua, cu Senin, Predominant senin sau Parțial
+    noros. Cu Înnorat, ceață, ploaie, ninsoare, noaptea sau fără date UV, caseta din mijloc
+    arată UMIDITATE (procent, nivel și aceeași scală).
+  * Luna (răsărit și apus, calculate pe Kindle, cu o abatere de câteva minute), Presiune (hPa;
+    după 3 ore de citiri și „în creștere”, „stabilă” sau „în scădere”) și ICA, indicele
+    european de calitate a aerului (cifra, nivelul Bun … Extrem de slab și o scală cu 6 linii).
+  UV-ul, ICA și polenul vin de la serviciul de calitate a aerului Open-Meteo (CAMS), o dată
+  pe oră. Modelul meteo ICON nu are indice UV.
 - Jos: „actualizat HH:MM” și bateria. „Se încarcă” la încărcat, „Încarcă bateria” sub 25%.
   Ambele mesaje au aceeași zonă, ștearsă complet înainte de fiecare scriere.
   Dacă vremea nu s-a putut descărca de mult: „! fără date din HH:MM”, negru.
 
 Automat:
 - după apus, lumina trece pe Mediu (sau se stinge, dacă bateria e sub 25%);
+- la 21% (fără încărcare), dacă lumina e aprinsă, clipește de 4 ori la Mediu (2 s stinsă,
+  2 s aprinsă), ca semnal că trebuie pus la încărcat, apoi se stinge. Aprinderea automată
+  intră în pauză până când bateria ajunge la 50%; atunci, între apus și 23:00, lumina se
+  aprinde din nou. Lumina aprinsă de mână în pauză rămâne. Setări: LIGHT_BLINK_AT,
+  LIGHT_BLINK_TIMES, LIGHT_RESUME;
 - la ora 23 lumina se stinge;
 - între 23 și 06 vremea se actualizează o dată pe oră (ziua, la 15 minute).
 Dacă schimbi lumina, alegerea ta rămâne până la următoarea schimbare automată.
@@ -77,12 +91,12 @@ Starea cerului: din norii joși și medii (nu din norii înalți, subțiri). Nor
 
 Setări: meteoalarmkindle.conf (locație, fus orar, trepte de lumină, LANDSCAPE_ROTA,
 MODEL, CLOUD_REFINE, LOW_OVERCAST, NIGHT_START/NIGHT_END, NIGHT_WEATHER_MINUTES,
-AUTO_LIGHT, EVENING_LIGHT, BATT_LOW, SHOW_FEELS, WARNINGS, POLLEN, MENU_SECONDS, LIGHT_SECONDS,
-CLOSE_OUTSIDE).
+AUTO_LIGHT, EVENING_LIGHT, BATT_LOW, LIGHT_BLINK_AT, LIGHT_RESUME, SHOW_FEELS, WARNINGS, POLLEN,
+ALT_BOXES, MENU_SECONDS, LIGHT_SECONDS, CLOSE_OUTSIDE).
 Orașul ales rămâne salvat (city.sel). Lista e în cities.txt: poți adăuga localități.
 Paginile cu județe și localități sunt gata desenate în ui/loc/ (se deschid repede). Dacă
 modifici cities.txt, paginile schimbate se desenează nume cu nume, puțin mai încet.
-Jurnal: meteoalarmkindle.log (ultimele 300 de linii). La pornire scrie versiunea („start v2.061 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
+Jurnal: meteoalarmkindle.log (ultimele 300 de linii). La pornire scrie versiunea („start v2.062 …”), iar alegerile din meniul ☰ apar ca „menu: …”.
 Dacă se blochează: ține apăsat butonul de pornire ~20 s.
 
 Despre: Meteo Alarm Kindle rulează prin KUAL (Kindle Unified Application Launcher) și a

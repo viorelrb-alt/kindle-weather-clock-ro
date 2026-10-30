@@ -16,7 +16,7 @@
 # While running, pressing the power button exits back to the Kindle UI.
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/mnt/us/libkh/bin
-VERSION=2.061
+VERSION=2.062
 
 DIR=$(cd "$(dirname "$0")/.." && pwd)
 . "$DIR/meteoalarmkindle.conf"
@@ -29,6 +29,7 @@ export TZ="$TZ_POSIX"
 STATE=/tmp/meteoalarmkindle
 PIDFILE=$STATE/pid
 WEATHER_ENV=$STATE/weather.env
+PRESS_LOG=$STATE/pressure.log
 LAYOUT_FILE=$STATE/layout
 LOG=$DIR/meteoalarmkindle.log
 
@@ -72,6 +73,9 @@ load_lang() {
 		T_SUN=SUN T_UV="UV INDEX" T_POLLEN=POLLEN T_SUNRISE=Sunrise T_SUNSET=Sunset
 		T_UVLV="Low|Moderate|High|Very high|Extreme" T_POLLV="Low|Moderate|High|Very high"
 		T_NOPOLLEN="no pollen" T_NODATA2="no data"
+		T_HUM=HUMIDITY T_HUMLV="Very dry|Dry|Comfortable|Humid|Very humid"
+		T_MOON=MOON T_PRESS=PRESSURE T_PRESSTR="rising|steady|falling" T_AQI=AQI
+		T_AQILV="Good|Fair|Moderate|Poor|Very poor|Extremely poor"
 		T_M_FLIP="Rotate screen 180°" T_M_VIEW="View:" T_V_SIMPLE=simple T_V_LIST="5-day list"
 		T_M_ORIENT="Orientation:" T_O_P=portrait T_O_L=landscape T_M_REFRESH="Refresh weather"
 		T_M_TEMP="Temperature:" T_M_CLOCK="Clock:" T_M_LANG="Language: Romanian"
@@ -90,6 +94,9 @@ load_lang() {
 		T_SUN=SOARE T_UV="INDICE UV" T_POLLEN=POLEN T_SUNRISE=Răsărit T_SUNSET=Apus
 		T_UVLV="Scăzut|Moderat|Ridicat|Foarte ridicat|Extrem" T_POLLV="Scăzut|Moderat|Ridicat|Foarte ridicat"
 		T_NOPOLLEN="fără polen" T_NODATA2="fără date"
+		T_HUM=UMIDITATE T_HUMLV="Foarte uscat|Uscat|Confortabil|Umed|Foarte umed"
+		T_MOON=LUNA T_PRESS=PRESIUNE T_PRESSTR="în creștere|stabilă|în scădere" T_AQI=ICA
+		T_AQILV="Bun|Acceptabil|Moderat|Slab|Foarte slab|Extrem de slab"
 		T_M_FLIP="Întoarce ecranul 180°" T_M_VIEW="Vedere:" T_V_SIMPLE=simplă T_V_LIST="listă 5 zile"
 		T_M_ORIENT="Orientare:" T_O_P=portret T_O_L=peisaj T_M_REFRESH="Actualizează vremea"
 		T_M_TEMP="Temperatura:" T_M_CLOCK="Ora:" T_M_LANG="Limba: engleză"
@@ -157,7 +164,7 @@ fetch_weather() {
 	mkdir -p "$STATE"
 	tz_enc=$(echo "$TZ_IANA" | sed 's#/#%2F#g')
 	url="http://api.open-meteo.com/v1/forecast?latitude=$LATITUDE&longitude=$LONGITUDE"
-	url="$url&current=temperature_2m,weather_code,precipitation,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,apparent_temperature,wind_speed_10m"
+	url="$url&current=temperature_2m,weather_code,precipitation,is_day,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,apparent_temperature,wind_speed_10m,relative_humidity_2m,pressure_msl"
 	url="$url&hourly=precipitation_probability,precipitation,weather_code,snowfall"
 	url="$url&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,sunrise,sunset,uv_index_max"
 	url="$url&forecast_days=6&forecast_hours=$RAIN_LOOKAHEAD_HOURS&timezone=$tz_enc"
@@ -184,6 +191,8 @@ fetch_weather() {
 	cloud_high=$(json_num "$cur" cloud_cover_high)
 	feels=$(json_num "$cur" apparent_temperature)
 	wind=$(json_num "$cur" wind_speed_10m)
+	hum=$(json_num "$cur" relative_humidity_2m)
+	press=$(json_num "$cur" pressure_msl)
 	if [ -z "$temp" ] || [ -z "$code" ]; then
 		log "weather: unexpected response: $(cut -c1-300 "$json" 2>/dev/null)"
 		return 1
@@ -229,7 +238,7 @@ fetch_weather() {
 		[ -n "$wet" ] && code=$wet
 		;;
 	esac
-	log "weather: model=${MODEL:-best_match} precip=$precip hour_mm=$hp hour_pop=$hpop% temp=$temp feels=$feels wind=$wind cloud=${cloud}% low=${cloud_low}% mid=${cloud_mid}% high=${cloud_high}% sky=${sky}% model_code=$raw_code shown_code=$code day=$is_day"
+	log "weather: model=${MODEL:-best_match} precip=$precip hour_mm=$hp hour_pop=$hpop% temp=$temp feels=$feels wind=$wind cloud=${cloud}% low=${cloud_low}% mid=${cloud_mid}% high=${cloud_high}% sky=${sky}% model_code=$raw_code shown_code=$code day=$is_day hum=${hum}% press=$press"
 
 	tmax=$(json_arr "$daily" temperature_2m_max | cut -d, -f1)
 	tmin=$(json_arr "$daily" temperature_2m_min | cut -d, -f1)
@@ -238,6 +247,19 @@ fetch_weather() {
 	sunset=$(json_arr "$daily" sunset | cut -d, -f1 | sed -n 's/.*T\([0-9][0-9]:[0-9][0-9]\).*/\1/p')
 	uv=$(json_arr "$daily" uv_index_max | cut -d, -f1)
 	case $uv in null | "") uv="" ;; *) uv=$(round "$uv") ;; esac
+	[ -n "$hum" ] && hum=$(round "$hum")
+	# Pressure (hPa) and its trend: each reading goes into $PRESS_LOG; the one from about three
+	# hours ago (2.5 to 4 h) tells rising (+1 hPa or more), falling (-1) or steady.
+	ptr=""
+	if [ -n "$press" ]; then
+		pnow=$(date +%s)
+		ptr=$(awk -v now="$pnow" -v p="$press" '
+			$1 >= now - 14400 && $1 <= now - 9000 && old == "" { old = $2 }
+			END { if (old != "") { d = p - old; print (d >= 1) ? 1 : (d <= -1) ? 3 : 2 } }' "$PRESS_LOG" 2>/dev/null)
+		{ awk -v now="$pnow" '$1 >= now - 14400' "$PRESS_LOG" 2>/dev/null; echo "$pnow $press"; } >"$PRESS_LOG.tmp" &&
+			mv "$PRESS_LOG.tmp" "$PRESS_LOG"
+		press=$(round "$press")
+	fi
 
 	# The next five days (today, the first entry, is skipped): weekday names and day of the
 	# month (computed here; BusyBox date cannot parse dates), weather codes, rounded high/low
@@ -323,6 +345,9 @@ fetch_weather() {
 		echo "W_SUNRISE=$sunrise"
 		echo "W_SUNSET=$sunset"
 		echo "W_UV=$uv"
+		echo "W_HUM=$hum"
+		echo "W_PRESS=$press"
+		echo "W_PRESS_TR=$ptr"
 		echo "$rain"
 		echo "$days"
 		echo "W_FETCHED=$(date +%s)"
@@ -330,17 +355,19 @@ fetch_weather() {
 	return 0
 }
 
-# Pollen from the Open-Meteo air quality service (Europe, in season). The plant with the highest
-# level is kept in $POLLEN_ENV: POLLEN_LVL 1 low .. 4 very high, 0 no data; POLLEN_PLANT.
+# The Open-Meteo air quality service (CAMS): the UV index now (the weather model, ICON, has
+# none: its uv_index_max is null), the European air quality index (0-100+) and pollen (Europe,
+# in season, POLLEN=1). Kept in $POLLEN_ENV: AIR_UV, AIR_AQI (empty: no data), POLLEN_LVL
+# 1 low .. 4 very high, 0 no data, and POLLEN_PLANT, the plant with the highest level.
 POLLEN_ENV=$STATE/pollen.env
 
-fetch_pollen() {
-	[ "${POLLEN:-1}" = 1 ] || return 0
+fetch_air() {
 	url="http://air-quality-api.open-meteo.com/v1/air-quality?latitude=$LATITUDE&longitude=$LONGITUDE"
-	url="$url&current=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen"
+	url="$url&current=uv_index,european_aqi"
+	[ "${POLLEN:-1}" = 1 ] && url="$url,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen"
 	pj=$STATE/pollen.json
 	if ! curl -s -f -m 20 -o "$pj.tmp" "$url"; then
-		log "pollen: fetch failed"
+		log "air: fetch failed"
 		return 1
 	fi
 	mv "$pj.tmp" "$pj"
@@ -357,9 +384,11 @@ fetch_pollen() {
 			t1["ragweed"] = 10; t2["ragweed"] = 50; t3["ragweed"] = 500
 		}
 		{
-			best = 0; bp = ""; bv = -1; seen = 0
+			best = 0; bp = ""; bv = -1; seen = 0; uv = ""; aqi = ""
 			for (i = 1; i <= NF; i++) {
 				split($i, kv, ":"); k = kv[1]; v = kv[2]; gsub(/"/, "", k); sub(/_pollen$/, "", k)
+				if (k == "uv_index" && v != "null" && v != "") { uv = sprintf("%.0f", v); continue }
+				if (k == "european_aqi" && v != "null" && v != "") { aqi = sprintf("%.0f", v); continue }
 				if (!(k in t1) || v == "null" || v == "") continue
 				v += 0; seen = 1
 				lv = (v < t1[k]) ? 1 : (v < t2[k]) ? 2 : (v < t3[k]) ? 3 : 4
@@ -367,10 +396,10 @@ fetch_pollen() {
 			}
 			if (!seen) best = 0
 			if (bv <= 0) bp = ""
-			printf "POLLEN_LVL=%d\nPOLLEN_PLANT=%s\n", best, bp
+			printf "AIR_UV=%s\nAIR_AQI=%s\nPOLLEN_LVL=%d\nPOLLEN_PLANT=%s\n", uv, aqi, best, bp
 		}')
 	echo "$res" >"$POLLEN_ENV.tmp" && mv "$POLLEN_ENV.tmp" "$POLLEN_ENV"
-	log "pollen: $(echo "$res" | tr '\n' ' ')"
+	log "air: $(echo "$res" | tr '\n' ' ')"
 	return 0
 }
 # --- Weather warnings (MeteoAlarm) -------------------------------------------
@@ -1224,30 +1253,148 @@ clock_fmt() {
 	fi
 }
 
-# Landscape capsule with the sun, the UV index and pollen (frame and header in the chrome).
+# Moonrise and moonset today (HH:MM, empty when there is none today) in M_RISE / M_SET,
+# computed here (Open-Meteo has no moon data) once a day and kept in $STATE/moon.env. The
+# Moon's position from the Astronomical Almanac's low-precision series (about 0.3°), its
+# altitude every 10 minutes from local midnight; rise and set where the upper limb, with
+# refraction and parallax, crosses the horizon. Within about 3 minutes of PyEphem.
+moon_times() {
+	M_DAY="" M_RISE="" M_SET=""
+	mt_day=$(date +%Y%m%d)
+	[ -f "$STATE/moon.env" ] && . "$STATE/moon.env"
+	[ "$M_DAY" = "$mt_day" ] && [ "$M_LAT" = "$LATITUDE" ] && [ "$M_LON" = "$LONGITUDE" ] && return 0
+	set -- $(date '+%s %H %M %S')
+	mt_t0=$(($1 - ${2#0} * 3600 - ${3#0} * 60 - ${4#0}))
+	set -- $(awk -v t0="$mt_t0" -v lat="$LATITUDE" -v lon="$LONGITUDE" '
+		function rad(d) { return d * 3.14159265358979 / 180 }
+		function mod360(x) { x = x - int(x / 360) * 360; return (x < 0) ? x + 360 : x }
+		function malt(e,  jd, T, lam, bet, P, eps, l, b, x, y, z, ra, dec, gm, ha, sa) {
+			jd = e / 86400 + 2440587.5; T = (jd - 2451545) / 36525
+			lam = 218.32 + 481267.881 * T + 6.29 * sin(rad(135.0 + 477198.87 * T)) - 1.27 * sin(rad(259.3 - 413335.36 * T)) \
+				+ 0.66 * sin(rad(235.7 + 890534.22 * T)) + 0.21 * sin(rad(269.9 + 954397.74 * T)) \
+				- 0.19 * sin(rad(357.5 + 35999.05 * T)) - 0.11 * sin(rad(186.5 + 966404.03 * T))
+			bet = 5.13 * sin(rad(93.3 + 483202.02 * T)) + 0.28 * sin(rad(228.2 + 960400.89 * T)) \
+				- 0.28 * sin(rad(318.3 + 6003.15 * T)) - 0.17 * sin(rad(217.6 - 407332.21 * T))
+			P = 0.9508 + 0.0518 * cos(rad(135.0 + 477198.87 * T)) + 0.0095 * cos(rad(259.3 - 413335.36 * T)) \
+				+ 0.0078 * cos(rad(235.7 + 890534.22 * T)) + 0.0028 * cos(rad(269.9 + 954397.74 * T))
+			eps = rad(23.439 - 0.013 * T); l = rad(lam); b = rad(bet)
+			x = cos(b) * cos(l)
+			y = cos(eps) * cos(b) * sin(l) - sin(eps) * sin(b)
+			z = sin(eps) * cos(b) * sin(l) + cos(eps) * sin(b)
+			ra = atan2(y, x); dec = atan2(z, sqrt(x * x + y * y))
+			gm = mod360(280.46061837 + 360.98564736629 * (jd - 2451545))
+			ha = rad(gm + lon) - ra
+			sa = sin(rad(lat)) * sin(dec) + cos(rad(lat)) * cos(dec) * cos(ha)
+			return atan2(sa, sqrt(1 - sa * sa)) * 180 / 3.14159265358979 - (0.7275 * P - 0.5667)
+		}
+		BEGIN {
+			r = 0; s = 0; p = malt(t0)
+			for (i = 1; i <= 144; i++) {
+				a = malt(t0 + i * 600)
+				if (p < 0 && a >= 0 && !r) r = int(t0 + (i - 1 + p / (p - a)) * 600)
+				if (p >= 0 && a < 0 && !s) s = int(t0 + (i - 1 + p / (p - a)) * 600)
+				p = a
+			}
+			print r, s
+		}')
+	[ "${1:-0}" -gt 0 ] && M_RISE=$(date -d "@$1" +%H:%M 2>/dev/null)
+	[ "${2:-0}" -gt 0 ] && M_SET=$(date -d "@$2" +%H:%M 2>/dev/null)
+	printf 'M_DAY=%s\nM_LAT=%s\nM_LON=%s\nM_RISE=%s\nM_SET=%s\n' "$mt_day" "$LATITUDE" "$LONGITUDE" "$M_RISE" "$M_SET" >"$STATE/moon.env"
+	log "moon: rise=${M_RISE:-none} set=${M_SET:-none}"
+}
+
+# Which set of three boxes the landscape simple view shows: 1 (sun, UV or humidity, pollen) or
+# 2 (moon, pressure, air quality). They take turns every quarter of an hour, so each full
+# refresh (FULL_REFRESH_MINUTES=15) shows the other set; redraws within a quarter keep it.
+# ALT_BOXES=0: always set 1.
+box_set() {
+	[ "${ALT_BOXES:-1}" = 1 ] || { echo 1; return 0; }
+	set -- $(date '+%H %M')
+	echo $((((${1#0} * 60 + ${2#0}) / 15) % 2 + 1))
+}
+
+# A big number with its level under it and a scale of N boxes: draw_level_box CENTER_X VALUE
+# LEVEL N TEXTS ("a|b|c": the level names). LEVEL 0 or no VALUE: "–" and an empty scale.
+draw_level_box() {
+	lb_w=21
+	[ "$4" -gt 5 ] && lb_w=16
+	lb_l=$(($1 - ($4 * lb_w + ($4 - 1) * 4) / 2))
+	if [ -n "$2" ] && [ "$3" -gt 0 ]; then
+		lb_p=$(fit_px "$F_BOLD" 74 122 "$2")
+		fb_ctext "$F_BOLD" "$lb_p" $((511 + (74 - lb_p) * 7 / 10)) "$1" "$2"
+		lb_t=$(echo "$5" | cut -d'|' -f"$3")
+		fb_ctext "$F_REG" "$(fit_px "$F_REG" 22 140 "$lb_t")" 586 "$1" "$lb_t"
+		draw_scale "$lb_l" 620 "$4" "$3" "$lb_w"
+	else
+		fb_ctext "$F_BOLD" 74 511 "$1" "–"
+		draw_scale "$lb_l" 620 "$4" 0 "$lb_w"
+	fi
+}
+
+# Landscape capsule (frame and header in the chrome), at x 590 / 750 / 910. Set 1: the sun
+# (sunrise, sunset), the UV index (from the air quality service, else the forecast's; in the
+# daytime with sun only, else the relative humidity) and pollen. Set 2: the moon (moonrise, moonset), the pressure
+# (hPa and its trend) and the European air quality index.
 draw_sun_box() {
+	POLLEN_LVL=0 POLLEN_PLANT="" AIR_UV="" AIR_AQI=""
+	[ -f "$POLLEN_ENV" ] && . "$POLLEN_ENV"
+	if [ "$(box_set)" = 2 ]; then
+		sb_1=$T_MOON sb_2=$T_PRESS sb_3=$T_AQI
+	else
+		# The UV index only in the daytime under a clear, mostly clear or partly cloudy sky
+		# (codes 0-2); otherwise, and without UV data, the humidity.
+		sb_uv=${AIR_UV:-$W_UV}
+		[ "$W_IS_DAY" = 1 ] && [ "${W_CODE:-3}" -le 2 ] 2>/dev/null || sb_uv=""
+		sb_1=$T_SUN sb_2=$T_UV sb_3=$T_POLLEN
+		[ -z "$sb_uv" ] && [ -n "$W_HUM" ] && sb_2=$T_HUM
+	fi
 	# One size for the three titles: the one that fits the longest.
 	sb_p=31
-	for sb_t in "$T_SUN" "$T_UV" "$T_POLLEN"; do sb_p=$(fit_px "$F_BOLD" "$sb_p" 129 "$sb_t"); done
-	fb_head 458 46 590 130 "$T_SUN" "$sb_p"
-	fb_head 458 46 750 130 "$T_UV" "$sb_p"
-	fb_head 458 46 910 130 "$T_POLLEN" "$sb_p"
-	fb_ctext "$F_REG" 20 512 590 "$T_SUNRISE"
-	fb_ctext "$F_BOLD" 29 536 590 "$(clock_fmt "$W_SUNRISE")"
-	fb_ctext "$F_REG" 20 579 590 "$T_SUNSET"
-	fb_ctext "$F_BOLD" 29 603 590 "$(clock_fmt "$W_SUNSET")"
-	if [ -n "$W_UV" ]; then
-		if [ "$W_UV" -le 2 ]; then uvl=1; elif [ "$W_UV" -le 5 ]; then uvl=2
-		elif [ "$W_UV" -le 7 ]; then uvl=3; elif [ "$W_UV" -le 10 ]; then uvl=4; else uvl=5; fi
-		fb_ctext "$F_BOLD" 74 511 750 "$W_UV"
-		fb_ctext "$F_REG" 22 586 750 "$(echo "$T_UVLV" | cut -d'|' -f"$uvl")"
-		draw_scale 690 620 5 "$uvl" 21
+	for sb_t in "$sb_1" "$sb_2" "$sb_3"; do sb_p=$(fit_px "$F_BOLD" "$sb_p" 129 "$sb_t"); done
+	fb_head 458 46 590 130 "$sb_1" "$sb_p"
+	fb_head 458 46 750 130 "$sb_2" "$sb_p"
+	fb_head 458 46 910 130 "$sb_3" "$sb_p"
+	if [ "$sb_1" = "$T_MOON" ]; then
+		moon_times
+		sb_r=$M_RISE sb_s=$M_SET
 	else
-		fb_ctext "$F_BOLD" 74 511 750 "–"
-		draw_scale 690 620 5 0 21
+		sb_r=$W_SUNRISE sb_s=$W_SUNSET
 	fi
-	POLLEN_LVL=0 POLLEN_PLANT=""
-	[ -f "$POLLEN_ENV" ] && . "$POLLEN_ENV"
+	fb_ctext "$F_REG" 20 512 590 "$T_SUNRISE"
+	fb_ctext "$F_BOLD" 29 536 590 "$(clock_fmt "$sb_r")"
+	fb_ctext "$F_REG" 20 579 590 "$T_SUNSET"
+	fb_ctext "$F_BOLD" 29 603 590 "$(clock_fmt "$sb_s")"
+	if [ "$sb_1" = "$T_MOON" ]; then
+		# Pressure: the number, "hPa" and the trend (after three hours of readings).
+		if [ -n "$W_PRESS" ]; then
+			pr_p=$(fit_px "$F_BOLD" 74 122 "$W_PRESS")
+			fb_ctext "$F_BOLD" "$pr_p" $((511 + (74 - pr_p) * 7 / 10)) 750 "$W_PRESS"
+			fb_ctext "$F_REG" 22 580 750 "hPa"
+			[ -n "$W_PRESS_TR" ] && fb_ctext "$F_BOLD" 22 607 750 "$(echo "$T_PRESSTR" | cut -d'|' -f"$W_PRESS_TR")"
+		else
+			fb_ctext "$F_BOLD" 74 511 750 "–"
+		fi
+		# European AQI: 0-20 good, 20-40 fair, 40-60 moderate, 60-80 poor, 80-100 very poor.
+		aq_l=0
+		if [ -n "$AIR_AQI" ]; then
+			aq_l=$((AIR_AQI / 20 + 1))
+			[ "$aq_l" -gt 6 ] && aq_l=6
+		fi
+		draw_level_box 910 "$AIR_AQI" "$aq_l" 6 "$T_AQILV"
+		return 0
+	fi
+	if [ -n "$sb_uv" ]; then
+		if [ "$sb_uv" -le 2 ]; then uvl=1; elif [ "$sb_uv" -le 5 ]; then uvl=2
+		elif [ "$sb_uv" -le 7 ]; then uvl=3; elif [ "$sb_uv" -le 10 ]; then uvl=4; else uvl=5; fi
+		draw_level_box 750 "$sb_uv" "$uvl" 5 "$T_UVLV"
+	elif [ -n "$W_HUM" ]; then
+		# Humidity: under 25% very dry, under 40 dry, up to 60 comfortable, up to 80 humid.
+		if [ "$W_HUM" -lt 25 ]; then hul=1; elif [ "$W_HUM" -lt 40 ]; then hul=2
+		elif [ "$W_HUM" -le 60 ]; then hul=3; elif [ "$W_HUM" -le 80 ]; then hul=4; else hul=5; fi
+		draw_level_box 750 "$W_HUM%" "$hul" 5 "$T_HUMLV"
+	else
+		draw_level_box 750 "" 0 5 ""
+	fi
 	if [ "${POLLEN_LVL:-0}" -gt 0 ]; then
 		fb_ctext "$F_BOLD" 29 520 910 "$(echo "$T_POLLV" | cut -d'|' -f"$POLLEN_LVL")"
 		pp=$T_NOPOLLEN
@@ -2432,6 +2579,8 @@ auto_light() {
 	elif after_sunset; then
 		al=evening
 		[ -n "$ST_LVL" ] && [ "$ST_CHG" != 1 ] && [ "$ST_LVL" -lt "${BATT_LOW:-25}" ] && al=evening-low
+		# Paused by the low battery (battery_light): stays off until LIGHT_RESUME %.
+		[ -f "$LIGHT_PAUSE" ] && al=evening-low
 	else
 		al=day
 	fi
@@ -2442,6 +2591,39 @@ auto_light() {
 	night | evening-low) light_set 0 ;;
 	evening) light_set "${EVENING_LIGHT:-3}" ;;
 	esac
+}
+
+# Low battery and the light. At LIGHT_BLINK_AT % or less (not charging) the automatic light is
+# paused, kept in $LIGHT_PAUSE (on the Kindle's storage, so it outlasts a restart); if the light
+# is on, it first blinks LIGHT_BLINK_TIMES times at Mediu (LIGHT_2), 2 s off and 2 s on, to ask
+# for the charger, then goes off. A light switched on by hand meanwhile is left alone. At
+# LIGHT_RESUME % the pause ends and auto_light applies the period again (from sunset to
+# NIGHT_START: EVENING_LIGHT). LIGHT_BLINK_AT=0: off.
+LIGHT_PAUSE=$DIR/light.pause
+battery_light() {
+	[ -n "$ST_LVL" ] || return 0
+	if [ -f "$LIGHT_PAUSE" ]; then
+		if [ "$ST_LVL" -ge "${LIGHT_RESUME:-50}" ]; then
+			rm -f "$LIGHT_PAUSE"
+			log "battery light: $ST_LVL%, pause over"
+			LAST_AUTO=""
+		fi
+		return 0
+	fi
+	[ "${LIGHT_BLINK_AT:-21}" -gt 0 ] && [ "$ST_CHG" != 1 ] && [ "$ST_LVL" -le "${LIGHT_BLINK_AT:-21}" ] || return 0
+	touch "$LIGHT_PAUSE"
+	bl_l=$(light_level_now)
+	log "battery light: $ST_LVL%, light ${bl_l:-?}: pause until ${LIGHT_RESUME:-50}%"
+	[ "${bl_l:-0}" -gt 0 ] || return 0
+	bl_n=0
+	while [ "$bl_n" -lt "${LIGHT_BLINK_TIMES:-4}" ]; do
+		lipc-set-prop com.lab126.powerd flIntensity 0
+		sleep 2
+		lipc-set-prop com.lab126.powerd flIntensity "$LIGHT_2"
+		sleep 2
+		bl_n=$((bl_n + 1))
+	done
+	light_set 0
 }
 
 # After today's sunset (W_SUNSET from the forecast; without it, the "night" flag after noon).
@@ -2559,12 +2741,13 @@ run() {
 					fetch_warnings && last_warn=$now
 				fi
 				if [ $((now - last_pollen)) -ge $((${POLLEN_MINUTES:-60} * 60 - 30)) ]; then
-					fetch_pollen && last_pollen=$now
+					fetch_air && last_pollen=$now
 				fi
 				[ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 0
 			fi
 		fi
 
+		battery_light
 		[ -f "$STATE/picker" ] || auto_light
 
 		if [ $((now - last_ntp)) -ge 3600 ]; then
@@ -2603,7 +2786,7 @@ run() {
 					fbink -q -c -m -M -t regular="$F_MED",px=36 "$T_LOADING" >/dev/null 2>&1
 					if fetch_weather; then last_fetch=$(date +%s); else last_fetch=0; fi
 					fetch_warnings && last_warn=$(date +%s)
-					fetch_pollen && last_pollen=$(date +%s)
+					fetch_air && last_pollen=$(date +%s)
 				fi
 				sleep 1
 				layout_init
@@ -2616,7 +2799,7 @@ run() {
 				[ -f "$STATE/picker" ] || draw 1
 				if fetch_weather; then last_fetch=$(date +%s); fi
 				fetch_warnings && last_warn=$(date +%s)
-				fetch_pollen && last_pollen=$(date +%s)
+				fetch_air && last_pollen=$(date +%s)
 				rm -f "$STATE/fetching"
 				[ -f "$STATE/picker" ] || draw 0
 			elif [ -n "$retry_at" ] && [ "$(date +%s)" -ge "$retry_at" ]; then
@@ -2626,7 +2809,7 @@ run() {
 					fail_n=0
 					last_fetch=$(date +%s)
 					fetch_warnings && last_warn=$(date +%s)
-					fetch_pollen && last_pollen=$(date +%s)
+					fetch_air && last_pollen=$(date +%s)
 					[ -f "$STATE/picker" ] || [ -f "$STATE/menu" ] || draw 1
 				elif [ "$fail_n" -lt 3 ]; then
 					fail_n=$((fail_n + 1))

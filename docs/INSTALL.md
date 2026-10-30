@@ -8,7 +8,7 @@
 Jailbreaking voids the warranty and can damage the device. You do it at your own risk.
 
 ## Steps
-1. Download `MeteoAlarmKindle-v2.061.zip` from the [download folder](../download/MeteoAlarmKindle-v2.061.zip?raw=1) and unzip it.
+1. Download `MeteoAlarmKindle-v2.062.zip` from the [download folder](../download/MeteoAlarmKindle-v2.062.zip?raw=1) and unzip it.
 2. Connect the Kindle by USB. It shows up as a drive.
 3. Copy the `extensions` folder to the root of the Kindle. Replace files if asked.
 4. Optional: open `extensions/meteoalarmkindle/meteoalarmkindle.conf` and set your place (`LATITUDE`, `LONGITUDE`, `PLACE`, `TZ_POSIX`, `TZ_IANA`). The default is Călărași, Romania. You can also pick a city on the screen later.

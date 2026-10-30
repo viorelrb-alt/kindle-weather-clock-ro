@@ -1,16 +1,38 @@
-# Meteo Alarm Kindle: changelog (latest: v2.061)
+# Meteo Alarm Kindle: changelog (latest: v2.062)
 
 Weather clock with MeteoAlarm warnings for the Kindle Paperwhite 1: a KUAL extension (shell
 script + FBInk). It runs through KUAL (Kindle Unified Application Launcher) and grew out of
 rekindle, an earlier clock and weather script.
-Weather and pollen from Open-Meteo, warnings from MeteoAlarm (ANM, Romania).
+Weather, UV index, air quality and pollen from Open-Meteo, warnings from MeteoAlarm (ANM, Romania).
 
 ## Version
 
-2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
+2.062: UV index from the air quality service (humidity without it), moon / pressure / air quality boxes, low-battery light blink and pause. 2.061: portrait no-codes layout side by side, ☰ menu order, fixes from the 2.06 log. 2.06: menus close at once, Kobo-style light bar, battery text fix, version in the log. 2.055: larger box titles, separate boxes, capitals for the info lines, icon fixes. 2.054: no-codes layout, "now" marker, light panel fixes. 2.053: faster city picker, pressed buttons, larger light panel. 2.052: renamed to Meteo Alarm Kindle. 2.051: small design fixes. 2.05: layout fixes after the second Kindle test. 2.04: Back / Close / Next row in the city picker. 2.03: the city picker is a speech bubble. 2.02: fixes from the first test on the Kindle. 2.01 was the first release of the new interface (2.xx).
 The 1.xx series is the old interface (last: 1.35).
 
-## What is new in 2.061
+## What is new in 2.062
+
+- Why the UV box showed "–": the weather model (`MODEL=icon_seamless`, DWD ICON) has no UV
+  index, so Open-Meteo returned `uv_index_max: null`. The UV index now comes from the
+  Open-Meteo air quality service (CAMS), fetched hourly with pollen, as the index now ("Low"
+  under the number for 0-2). It is shown only in the daytime under a clear, mostly clear or
+  partly cloudy sky; when overcast, foggy, wet, at night or without UV data the box shows the
+  relative humidity (%, level and the same 5-step scale).
+- Landscape, simple view: the three boxes at the bottom right take turns every 15 minutes
+  (ALT_BOXES=1): Sun / UV index (or Humidity) / Pollen, then Moon / Pressure / AQI.
+  Moonrise and moonset are computed on the Kindle (Open-Meteo has no moon data); checked
+  against PyEphem within 3 minutes. Pressure is `pressure_msl` in hPa, with the trend over
+  about 3 hours once there are readings. AQI is the European air quality index (Good, Fair,
+  Moderate, Poor, Very poor, Extremely poor; 6-step scale).
+- Low battery: at 21% (not charging) a lit frontlight blinks 4 times at Mediu (2 s off, 2 s
+  on), then goes off, and the automatic evening light is paused until the battery is back at
+  50%; then, between sunset and 23:00, it comes on again. The pause is kept in `light.pause`
+  (survives a restart). Settings: LIGHT_BLINK_AT, LIGHT_BLINK_TIMES, LIGHT_RESUME. BATT_LOW
+  (25%) still keeps the evening light off and shows "Charge me".
+- Log: `weather:` lines add `hum=` and `press=`; `air: AIR_UV=… AIR_AQI=… POLLEN_LVL=…`
+  replaces `pollen:`; also `moon:` and `battery light:`.
+
+## What was new in 2.061
 
 After the test of 2.06 on the Kindle (log of 29 Oct) and the mock-ups checked in Photon:
 
@@ -183,16 +205,17 @@ Settings are in `extensions/meteoalarmkindle/meteoalarmkindle.conf` (new: POLLEN
 - `tools/make_ui.py` (Python + Pillow) regenerates the static frame images in `extensions/meteoalarmkindle/ui/`.
 - `tools/make_widths.py` (Pillow) regenerates the glyph width tables in `extensions/meteoalarmkindle/fonts/`.
 - `meteoalarmkindle.sh preview LAYOUT ORIENT [menu|light|pick|pick2|pick:COUNTY]` draws a screen from cached data.
-- 2.01 was tested on a Kindle PW1; 2.02 to 2.061 are tested with PC previews (see `previews/`).
+- 2.01 was tested on a Kindle PW1; 2.02 to 2.062 are tested with PC previews (see `previews/`).
 
 ---
 
 ## Pe scurt (română)
 
 Aplicația se numește acum Meteo Alarm Kindle (folderul extensions/meteoalarmkindle). Rulează prin KUAL și a pornit de la rekindle. Dacă ai avut o versiune veche, șterge extensions/rekindle de pe Kindle. Copiază folderul `extensions` pe Kindle (Replace) și pornește din KUAL.
+Nou în 2.062: UV-ul vine de la serviciul de calitate a aerului (modelul ICON nu are UV, de aceea apărea „–”); fără UV, caseta arată Umiditatea (UV doar ziua, cu Senin / Predominant senin / Parțial noros); în peisaj, vederea simplă, casetele alternează la 15 minute între Soare / UV / Polen și Lună / Presiune / ICA; la 21% lumina clipește de 4 ori, se stinge și aprinderea automată stă pe pauză până la 50%.
 Nou în 2.061: în portret, fără coduri, temperatura e în stânga (se termină la mijloc, cu loc pentru minus) și icoana în dreapta; meniul ☰ are ordinea Orientare, Vedere, Întoarce ecranul, Actualizează vremea, Temperatura, Ora, Limba, iar primele 4 se reordonează ca favoritele; rândul de limbă e tradus; meniul nu mai rămâne „mort” după o glisare lungă; butoanele se pot atinge până la marginea ecranului; vremea se reîncearcă după 15 s; jurnalul scrie alegerile din meniu.
 Nou în 2.06: meniurile se închid imediat la atingerea din afară; butonul de lumină arată pe marginea stângă o bară ca pe Kobo Libra 2 și o bulă cu indicații (fără −, +, MIN, MEDIU, MAX); mesajele de baterie nu se mai suprapun; jurnalul scrie versiunea la pornire.
 Nou în 2.055: titlurile casetelor mai mari și îngroșate; casete separate în peisaj (zilele de jos și Soare / UV / Polen); RESIMȚIT, MAX / MIN și VÂNT cu majuscule, aceeași mărime peste tot; icoana vremii nu mai acoperă linii sau texte; triunghiul de la codul roșu, alb cu contur negru.
 Nou în 2.054: fără coduri, icoana sus și temperatura jos, centrate; minus scurt; „acum” pe graficul de ploaie; MIN/MEDIU/MAX închid panoul de lumină; setarea CLOSE_OUTSIDE.
 Nou în 2.053: meniul de locații se deschide repede și nu se mai închide la a doua atingere pe pin; favoritele sunt ultimele 3 localități alese; orice buton atins devine gri mediu; meniurile se închid cu flash; panoul de lumină e cu 20% mai mare; codurile portocaliu și roșu au casetă gri mediu, iar roșul are un triunghi cu „!”.
-Detalii complete în `extensions/meteoalarmkindle/CITESTE.txt`. Versiunile 2.02–2.061 sunt testate în simulare pe PC.
+Detalii complete în `extensions/meteoalarmkindle/CITESTE.txt`. Versiunile 2.02–2.062 sunt testate în simulare pe PC.
